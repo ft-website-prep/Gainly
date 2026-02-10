@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base + component styles placed into Tailwind layers */
+@layer base {
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        margin: 0;
+        padding: 24px;
+        background: #f7f7fb;
+        color: #111;
+    }
+}
+
+@layer components {
+    .app {
+        max-width: 800px;
+        margin: 48px auto;
+        background: #fff;
+        padding: 28px;
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(17, 17, 17, 0.08);
+    }
+}
