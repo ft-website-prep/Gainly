@@ -67,7 +67,7 @@ Die ausführliche Dokumentation liegt im **Wiki** dieses Repos:
 
 ## Team
 
-| Name | Rolle |
-|------|-------|
-| Adrian | Full-Stack-Developer |
-| [Julian] | Full-Stack-Developer |
+| Rolle | Name |
+|-------|------|
+| Entwickler | Adrian |
+| Entwickler | [Partner] |
