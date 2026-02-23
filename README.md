@@ -2,25 +2,35 @@
 
 **Die Calisthenics & Fitness Community App mit Gamification.**
 
-Gainly kombiniert Workout-Tracking, Community-Features und ein Gamification-System (XP, Ligen, Achievements) zu einer App, die Fitness motivierend und sozial macht.
+Gainly kombiniert Workout-Tracking, Community-Features und ein Gamification-System zu einer App, die Fitness motivierend und sozial macht.
 
 ---
 
-## 🛠 Tech Stack
+## Was ist Gainly?
 
-| Bereich | Technologie | Zweck |
-|---------|------------|-------|
-| Frontend | React + Vite | UI & Entwicklungsserver |
-| Styling | Tailwind CSS | Utility-First CSS |
-| Animationen | Framer Motion, GSAP, Lenis | Scroll- & UI-Animationen |
-| Backend | Supabase (PostgreSQL) | Datenbank, Auth, Storage, Realtime |
-| Routing | React Router | Seitennavigation |
+**Drei Säulen:**
+
+🏋️ **Training** – Übungsdatenbank mit Skill Trees, Workout-Vorlagen, Set-für-Set Tracking und persönliche Bestleistungen.
+
+🎮 **Gamification** – XP für jedes Workout, Achievements zum Freischalten, ein Liga-System (Rookie → Grinder → Athlete → Beast → Legend) und wöchentliche Leaderboards.
+
+👥 **Community** – Freunde adden, Gruppen/Crews erstellen, Progress Posts teilen, Challenges starten und gegeneinander antreten.
 
 ---
 
-## 🚀 Lokale Einrichtung
+## Tech Stack
 
-**Voraussetzungen:** Node.js 18+ (`node -v` zum Prüfen)
+| Bereich | Technologie |
+|---------|------------|
+| Frontend | React + Vite |
+| Styling | Tailwind CSS |
+| Animationen | Framer Motion, GSAP, Lenis |
+| Backend | Supabase (PostgreSQL) |
+| Routing | React Router |
+
+---
+
+## Schnellstart
 
 ```bash
 git clone https://github.com/EUER-USERNAME/gainly.git
@@ -35,54 +45,29 @@ VITE_SUPABASE_URL=https://euer-projekt.supabase.co
 VITE_SUPABASE_ANON_KEY=euer-anon-key
 ```
 
-Die Werte findest du im Supabase Dashboard unter **Settings → API**.
-
-> ⚠️ Die `.env`-Datei wird NICHT in Git gepusht. Jedes Teammitglied muss sie lokal erstellen.
-
-Dev-Server starten:
+> ⚠️ Werte findest du im Supabase Dashboard (Settings → API). Die `.env` wird nicht in Git gepusht – jeder muss sie lokal erstellen.
 
 ```bash
 npm run dev
 ```
 
----
-
-## 🗄 Datenbank
-
-23 Tabellen auf **Supabase** (PostgreSQL), Region **Frankfurt (eu-central-1)**.
-
-| Phase | Inhalt | Tabellen |
-|-------|--------|----------|
-| Phase 1 | Core (Exercises, Workouts, Logs) | 8 |
-| Phase 2 | Gamification (XP, Achievements, Rewards) | 5 |
-| Phase 3 | Community (Friends, Groups, Posts, Challenges) | 10 |
-
-**Liga-System:** Rookie → Grinder → Athlete → Beast → Legend
-
-Komplette Dokumentation: `docs/database/gainly-db-dokumentation.md`
+App öffnet auf `http://localhost:5173/`
 
 ---
 
-## 🔀 Git Workflow
+## Dokumentation
 
-```bash
-git add .
-git commit -m "feat: Beschreibung"
-git push
-```
+Die ausführliche Dokumentation liegt im **Wiki** dieses Repos:
 
-| Prefix | Wann | Beispiel |
-|--------|------|---------|
-| `feat:` | Neues Feature | `feat: Login-Seite` |
-| `fix:` | Bug behoben | `fix: Streak-Counter` |
-| `docs:` | Dokumentation | `docs: README aktualisiert` |
-| `style:` | Design/CSS | `style: Button-Farben` |
+📖 **Terminal-Befehle** – Git, npm, Vite, Dateiverwaltung, häufige Gefahren
+
+📖 **Datenbank-Dokumentation** – Alle 23 Tabellen, SQL-Konzepte, RLS-Policies, Trigger
 
 ---
 
-## 👥 Team
+## Team
 
-| Rolle | Name |
-|-------|------|
-| Entwickler | Adrian |
-| Entwickler | [Partner] |
+| Name | Rolle |
+|------|-------|
+| Adrian | Full-Stack-Developer |
+| [Julian] | Full-Stack-Developer |
