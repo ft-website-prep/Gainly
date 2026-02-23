@@ -85,4 +85,4 @@ git push
 | Rolle | Name |
 |-------|------|
 | Entwickler | Adrian |
-| Entwickler | [Partner] |
+| Entwickler | Julian |
