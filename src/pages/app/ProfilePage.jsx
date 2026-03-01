@@ -1,6 +1,401 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+
+// =============================================
+// CONSTANTS
+// =============================================
+const LEAGUES = [
+  { name: 'Rookie', emoji: '🌱', min: 0, color: 'text-green-500', bg: 'bg-green-50' },
+  { name: 'Grinder', emoji: '⚙️', min: 1000, color: 'text-gray-500', bg: 'bg-gray-50' },
+  { name: 'Athlete', emoji: '💪', min: 5000, color: 'text-sky-500', bg: 'bg-sky-50' },
+  { name: 'Beast', emoji: '🔥', min: 15000, color: 'text-orange-500', bg: 'bg-orange-50' },
+  { name: 'Legend', emoji: '👑', min: 50000, color: 'text-amber-500', bg: 'bg-amber-50' },
+]
+function getLeague(xp) {
+  for (let i = LEAGUES.length - 1; i >= 0; i--) if (xp >= LEAGUES[i].min) return { ...LEAGUES[i], next: LEAGUES[i + 1] || null }
+  return { ...LEAGUES[0], next: LEAGUES[1] }
+}
+function calcAge(d) {
+  if (!d) return null
+  const t = new Date(), b = new Date(d)
+  let a = t.getFullYear() - b.getFullYear()
+  if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--
+  return a
+}
+// Navy Method body fat estimation
+function calcBodyFat(gender, neck, waist, hip, height) {
+  if (!neck || !waist || !height) return null
+  if (gender === 'male') {
+    return Math.max(0, (86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(height) + 36.76)).toFixed(1)
+  } else if (gender === 'female' && hip) {
+    return Math.max(0, (163.205 * Math.log10(waist + hip - neck) - 97.684 * Math.log10(height) - 78.387)).toFixed(1)
+  }
+  return null
+}
+
+// =============================================
+// SVG CHARTS
+// =============================================
+function AreaChart({ data, label, color = '#38bdf8', unit = '' }) {
+  if (!data?.length || data.every(d => !d.value)) return <div className="text-sm text-dim text-center py-8">No data yet</div>
+  const vals = data.map(d => d.value)
+  const max = Math.max(...vals, 1), min = Math.min(...vals.filter(v => v > 0), 0)
+  const w = 200, h = 50, pad = 4
+  const range = max - min || 1
+  const pts = data.map((d, i) => ({
+    x: pad + (i / Math.max(data.length - 1, 1)) * (w - pad * 2),
+    y: h - pad - ((d.value - min) / range) * (h - pad * 2), ...d
+  }))
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+  const area = `${line} L${pts[pts.length - 1].x},${h} L${pts[0].x},${h} Z`
+  const gid = `g-${label.replace(/\W/g, '')}`
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-semibold text-dark">{label}</div>
+        {data[data.length - 1]?.value > 0 && <div className="text-xs text-dim">{data[data.length - 1].value}{unit}</div>}
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-28" preserveAspectRatio="none">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.25" /><stop offset="100%" stopColor={color} stopOpacity="0.02" /></linearGradient></defs>
+        <path d={area} fill={`url(#${gid})`} />
+        <path d={line} fill="none" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+        {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.8" fill="white" stroke={color} strokeWidth="1.2" />)}
+      </svg>
+      <div className="flex justify-between mt-1">{data.map((d, i) => <div key={i} className="text-[9px] text-dim text-center flex-1">{d.label}</div>)}</div>
+    </div>
+  )
+}
+
+function BarChart({ data, label, color = '#38bdf8' }) {
+  if (!data?.length) return null
+  const max = Math.max(...data.map(d => d.value), 1)
+  return (
+    <div>
+      <div className="text-sm font-semibold text-dark mb-3">{label}</div>
+      <div className="flex items-end gap-1.5 h-28">
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <div className="text-[9px] text-muted font-medium">{d.value || ''}</div>
+            <div className="w-full rounded-t-md" style={{ height: `${(d.value / max) * 100}%`, minHeight: d.value > 0 ? '3px' : '0', backgroundColor: color }} />
+            <div className="text-[9px] text-dim">{d.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RadarChart({ data, size = 200 }) {
+  if (!data?.length || data.every(d => !d.value)) return <div className="text-sm text-dim text-center py-8">No exercise data yet</div>
+  const cx = size / 2, cy = size / 2, r = size * 0.36, max = Math.max(...data.map(d => d.value), 1), angle = (2 * Math.PI) / data.length
+  const pt = (i, v) => ({ x: cx + r * (v / max) * Math.sin(i * angle), y: cy - r * (v / max) * Math.cos(i * angle) })
+  const grid = [0.25, 0.5, 0.75, 1]
+  const dp = data.map((d, i) => pt(i, d.value))
+  return (
+    <div>
+      <div className="text-sm font-semibold text-dark mb-2">Muscle Balance</div>
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[220px] mx-auto">
+        {grid.map((l, li) => { const ps = data.map((_, i) => pt(i, max * l)); return <polygon key={li} points={ps.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="0.5" /> })}
+        {data.map((_, i) => { const p = pt(i, max); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#e5e7eb" strokeWidth="0.5" /> })}
+        <polygon points={dp.map(p => `${p.x},${p.y}`).join(' ')} fill="#38bdf8" fillOpacity="0.2" stroke="#38bdf8" strokeWidth="1.5" />
+        {dp.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke="#38bdf8" strokeWidth="1.5" />)}
+        {data.map((d, i) => { const p = pt(i, max * 1.28); return <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="text-[7px] fill-gray-500 font-medium">{d.label}</text> })}
+      </svg>
+    </div>
+  )
+}
+
+function ProgressBar({ label, value, max, color = 'bg-sky-400' }) {
+  const pct = Math.min((value / Math.max(max, 1)) * 100, 100)
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1.5"><span className="text-muted font-medium">{label}</span><span className="text-dark font-semibold">{value}/{max}</span></div>
+      <div className="h-2.5 bg-surface rounded-full overflow-hidden"><div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} /></div>
+    </div>
+  )
+}
+
+// =============================================
+// DATE RANGE PICKER
+// =============================================
+function DateRangePicker({ range, onChange }) {
+  return (
+    <div className="flex gap-1 bg-surface border border-border rounded-xl p-1">
+      {[{ l: '7D', d: 7 }, { l: '14D', d: 14 }, { l: '30D', d: 30 }, { l: '90D', d: 90 }, { l: '6M', d: 180 }, { l: '1Y', d: 365 }].map(p => (
+        <button key={p.d} onClick={() => onChange(p.d)}
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === p.d ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>{p.l}</button>
+      ))}
+    </div>
+  )
+}
+
+// =============================================
+// ACTIVITY CALENDAR (with weekday labels + dates)
+// =============================================
+function ActivityCalendar({ workoutDates, days = 84 }) {
+  const allDays = []
+  const today = new Date()
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i)
+    allDays.push({ date: d.toISOString().split('T')[0], count: workoutDates.filter(wd => wd === d.toISOString().split('T')[0]).length, dow: d.getDay(), day: d.getDate(), month: d.getMonth() })
+  }
+  const weeks = []
+  for (let i = 0; i < allDays.length; i += 7) weeks.push(allDays.slice(i, i + 7))
+
+  // Month labels
+  const monthLabels = []
+  let lastM = -1
+  weeks.forEach((w, wi) => {
+    const m = w[0].month
+    if (m !== lastM) { monthLabels.push({ idx: wi, label: new Date(2024, m).toLocaleString('en', { month: 'short' }) }); lastM = m }
+  })
+
+  const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', '']
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="inline-flex gap-0">
+        {/* Day labels */}
+        <div className="flex flex-col gap-[3px] mr-2 mt-5">
+          {dayLabels.map((l, i) => <div key={i} className="h-[13px] text-[9px] text-dim leading-[13px]">{l}</div>)}
+        </div>
+        <div>
+          {/* Month labels */}
+          <div className="flex gap-[3px] mb-1">
+            {weeks.map((_, wi) => {
+              const ml = monthLabels.find(m => m.idx === wi)
+              return <div key={wi} className="w-[13px] text-center"><span className="text-[8px] text-dim">{ml?.label || ''}</span></div>
+            })}
+          </div>
+          {/* Grid */}
+          <div className="flex gap-[3px]">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-[3px]">
+                {week.map((day, di) => (
+                  <div key={di}
+                    title={`${day.date} – ${day.count} workout${day.count !== 1 ? 's' : ''}`}
+                    className={`w-[13px] h-[13px] rounded-sm cursor-default ${
+                      day.count >= 2 ? 'bg-sky-500' : day.count === 1 ? 'bg-sky-300' : 'bg-gray-100'
+                    }`} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 mt-2">
+        <span className="text-[9px] text-dim">Less</span>
+        <div className="w-[9px] h-[9px] rounded-sm bg-gray-100" />
+        <div className="w-[9px] h-[9px] rounded-sm bg-sky-300" />
+        <div className="w-[9px] h-[9px] rounded-sm bg-sky-500" />
+        <span className="text-[9px] text-dim">More</span>
+      </div>
+    </div>
+  )
+}
+
+// =============================================
+// HORIZONTAL TIMELINE
+// =============================================
+function HorizontalTimeline({ entries, onDelete, filter, onFilterChange }) {
+  const scrollRef = useRef(null)
+  const tags = useMemo(() => {
+    const all = entries.flatMap(e => e.tags || [])
+    return [...new Set(all)]
+  }, [entries])
+
+  const filtered = filter ? entries.filter(e => e.tags?.includes(filter) || e.exercise_name === filter) : entries
+
+  return (
+    <div>
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <button onClick={() => onFilterChange(null)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${!filter ? 'bg-sky-100 text-sky-600' : 'bg-surface text-muted hover:text-dark'}`}>All</button>
+        {tags.map(t => (
+          <button key={t} onClick={() => onFilterChange(t)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === t ? 'bg-sky-100 text-sky-600' : 'bg-surface text-muted hover:text-dark'}`}>{t}</button>
+        ))}
+        {/* Unique exercise names as filters too */}
+        {[...new Set(entries.map(e => e.exercise_name).filter(Boolean).filter(n => !tags.includes(n)))].map(n => (
+          <button key={n} onClick={() => onFilterChange(n)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === n ? 'bg-sky-100 text-sky-600' : 'bg-surface text-muted hover:text-dark'}`}>💪 {n}</button>
+        ))}
+      </div>
+
+      {filtered.length > 0 ? (
+        <div className="relative">
+          {/* Horizontal line */}
+          <div className="absolute top-[28px] left-0 right-0 h-0.5 bg-border" />
+
+          <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-4 pt-1 scroll-smooth" style={{ scrollbarWidth: 'thin' }}>
+            {filtered.map((entry) => (
+              <div key={entry.id} className="flex-shrink-0 w-64 relative">
+                {/* Dot on timeline */}
+                <div className="flex justify-center mb-2">
+                  <div className="w-5 h-5 bg-sky-400 rounded-full border-3 border-white shadow-md z-10 relative" style={{ borderWidth: '3px' }} />
+                </div>
+                {/* Date */}
+                <div className="text-center text-[10px] text-dim mb-2 font-medium">
+                  {new Date(entry.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+                {/* Card */}
+                <div className="bg-surface rounded-xl p-4 group hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="text-sm font-bold text-dark leading-tight">{entry.title}</div>
+                    <button onClick={() => onDelete(entry.id)}
+                      className="text-dim hover:text-red-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">✕</button>
+                  </div>
+                  {entry.exercise_name && (
+                    <span className="inline-block mb-2 px-2 py-0.5 bg-sky-50 text-sky-600 rounded-md text-[10px] font-semibold">{entry.exercise_name}</span>
+                  )}
+                  {entry.tags?.length > 0 && (
+                    <div className="flex gap-1 mb-2 flex-wrap">
+                      {entry.tags.map(t => <span key={t} className="px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded text-[9px] font-medium">{t}</span>)}
+                    </div>
+                  )}
+                  {entry.description && <p className="text-xs text-muted mb-2 line-clamp-3">{entry.description}</p>}
+                  {entry.media_url && entry.media_type === 'image' && (
+                    <img src={entry.media_url} alt="" className="rounded-lg w-full h-32 object-cover" />
+                  )}
+                  {entry.media_url && entry.media_type === 'video' && (
+                    <video src={entry.media_url} controls className="rounded-lg w-full h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="text-3xl mb-2">📸</div>
+          <p className="text-sm text-muted">No entries yet{filter ? ` for "${filter}"` : ''}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// =============================================
+// TIMELINE ADD MODAL (with drag & drop)
+// =============================================
+function TimelineAddModal({ onClose, onSave }) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [mediaUrl, setMediaUrl] = useState('')
+  const [mediaType, setMediaType] = useState('image')
+  const [exerciseName, setExerciseName] = useState('')
+  const [tags, setTags] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault(); setDragging(false)
+    const file = e.dataTransfer?.files?.[0]
+    if (file) handleFile(file)
+  }, [])
+
+  const handleFile = (file) => {
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) return
+    setMediaType(file.type.startsWith('video/') ? 'video' : 'image')
+    // Convert to base64 data URL for preview (in production you'd upload to Supabase Storage)
+    const reader = new FileReader()
+    reader.onload = () => setMediaUrl(reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleSave = async () => {
+    if (!title.trim()) return
+    setSaving(true)
+    const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean)
+    await onSave({
+      title, description: description || null,
+      media_url: mediaUrl || null, media_type: mediaUrl ? mediaType : null,
+      exercise_name: exerciseName || null, tags: tagArray,
+    })
+    setSaving(false); onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-lg font-bold text-dark">Add Progress Entry</h2>
+          <button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm text-muted mb-2">Title *</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. First Muscle Up!"
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="block text-sm text-muted mb-2">Exercise (optional)</label>
+            <input type="text" value={exerciseName} onChange={e => setExerciseName(e.target.value)} placeholder="e.g. Muscle Up, Planche"
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="block text-sm text-muted mb-2">Tags (comma separated)</label>
+            <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g. Abs, Arms, Muscle Up Journey"
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+          </div>
+          <div>
+            <label className="block text-sm text-muted mb-2">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Notes about your progress..."
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400 resize-none" />
+          </div>
+
+          {/* Drag & Drop Zone */}
+          <div>
+            <label className="block text-sm text-muted mb-2">Photo / Video</label>
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true) }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                dragging ? 'border-sky-400 bg-sky-50' : mediaUrl ? 'border-green-300 bg-green-50' : 'border-border hover:border-sky-300 hover:bg-sky-50/30'
+              }`}
+            >
+              {mediaUrl ? (
+                <div>
+                  {mediaType === 'image' ? (
+                    <img src={mediaUrl} alt="" className="max-h-32 mx-auto rounded-lg mb-2" />
+                  ) : (
+                    <video src={mediaUrl} className="max-h-32 mx-auto rounded-lg mb-2" />
+                  )}
+                  <p className="text-xs text-green-600 font-medium">✓ File added – click or drag to replace</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-3xl mb-2">📸</div>
+                  <p className="text-sm text-muted font-medium">Drag & drop image or video here</p>
+                  <p className="text-xs text-dim mt-1">or click to browse</p>
+                </div>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden"
+                onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }} />
+            </div>
+            {/* Or paste URL */}
+            {!mediaUrl && (
+              <div className="mt-2">
+                <input type="url" value={mediaUrl} onChange={e => { setMediaUrl(e.target.value); setMediaType('image') }}
+                  placeholder="...or paste image URL" className="w-full bg-surface border border-border rounded-xl px-4 py-2 text-dark text-xs focus:outline-none focus:border-sky-400" />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-3 p-6 border-t border-border">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !title.trim()}
+            className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Add Entry'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // =============================================
 // BODY DATA MODAL
@@ -11,69 +406,108 @@ function BodyDataModal({ profile, onClose, onSave }) {
   const [birthDate, setBirthDate] = useState(profile?.birth_date || '')
   const [gender, setGender] = useState(profile?.gender || '')
   const [saving, setSaving] = useState(false)
+  const GENDERS = [{ id: 'male', label: 'Male', icon: '♂️' }, { id: 'female', label: 'Female', icon: '♀️' }, { id: 'other', label: 'Other', icon: '⚧️' }, { id: 'prefer_not_to_say', label: 'Rather not say', icon: '🤐' }]
+  const handleSave = async () => { setSaving(true); await onSave({ weight_kg: weight || null, height_cm: height || null, birth_date: birthDate || null, gender: gender || null }); setSaving(false); onClose() }
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between p-6 border-b border-border"><h2 className="text-lg font-bold text-dark">Body Data</h2><button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button></div>
+        <div className="p-6 space-y-4">
+          <div><label className="block text-sm text-muted mb-1.5">Weight (kg)</label><input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} placeholder="75.5" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Height (cm)</label><input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="180" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Date of Birth</label><input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Gender</label><div className="grid grid-cols-2 gap-2">{GENDERS.map(g => <button key={g.id} onClick={() => setGender(g.id)} className={`p-2.5 rounded-xl border text-left text-sm ${gender === g.id ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-border bg-surface text-muted'}`}><span className="mr-1.5">{g.icon}</span>{g.label}</button>)}</div></div>
+        </div>
+        <div className="flex gap-3 p-6 border-t border-border">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// =============================================
+// MEASUREMENTS MODAL
+// =============================================
+function MeasurementsModal({ profile, onClose, onSave }) {
+  const [neck, setNeck] = useState('')
+  const [waist, setWaist] = useState('')
+  const [hip, setHip] = useState('')
+  const [chest, setChest] = useState('')
+  const [lArm, setLArm] = useState('')
+  const [rArm, setRArm] = useState('')
+  const [lThigh, setLThigh] = useState('')
+  const [rThigh, setRThigh] = useState('')
+  const [weight, setWeight] = useState(profile?.weight_kg || '')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const bf = calcBodyFat(profile?.gender, parseFloat(neck), parseFloat(waist), parseFloat(hip), parseFloat(profile?.height_cm))
 
   const handleSave = async () => {
     setSaving(true)
     await onSave({
-      weight_kg: weight || null,
-      height_cm: height || null,
-      birth_date: birthDate || null,
-      gender: gender || null,
+      weight_kg: weight || null, neck_cm: neck || null, waist_cm: waist || null,
+      hip_cm: hip || null, chest_cm: chest || null,
+      left_arm_cm: lArm || null, right_arm_cm: rArm || null,
+      left_thigh_cm: lThigh || null, right_thigh_cm: rThigh || null,
+      body_fat_pct: bf || null, notes: notes || null,
     })
-    setSaving(false)
-    onClose()
+    setSaving(false); onClose()
   }
 
-  const GENDERS = [
-    { id: 'male', label: 'Male', icon: '♂️' },
-    { id: 'female', label: 'Female', icon: '♀️' },
-    { id: 'other', label: 'Other', icon: '⚧️' },
-    { id: 'prefer_not_to_say', label: 'Rather not say', icon: '🤐' },
-  ]
+  const Field = ({ label, value, onChange, placeholder }) => (
+    <div>
+      <label className="block text-[11px] text-muted mb-1">{label}</label>
+      <input type="number" step="0.1" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-dark text-sm focus:outline-none focus:border-sky-400" />
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-lg font-bold text-dark">Body Data</h2>
+          <h2 className="text-lg font-bold text-dark">New Measurement</h2>
           <button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button>
         </div>
-        <div className="p-6 space-y-5">
-          <div>
-            <label className="block text-sm text-muted mb-2">Weight (kg)</label>
-            <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)}
-              placeholder="e.g. 75.5" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark focus:outline-none focus:border-sky-400" />
-          </div>
-          <div>
-            <label className="block text-sm text-muted mb-2">Height (cm)</label>
-            <input type="number" value={height} onChange={(e) => setHeight(e.target.value)}
-              placeholder="e.g. 180" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark focus:outline-none focus:border-sky-400" />
-          </div>
-          <div>
-            <label className="block text-sm text-muted mb-2">Date of Birth</label>
-            <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark focus:outline-none focus:border-sky-400" />
-          </div>
-          <div>
-            <label className="block text-sm text-muted mb-2">Gender</label>
-            <div className="grid grid-cols-2 gap-2">
-              {GENDERS.map((g) => (
-                <button key={g.id} onClick={() => setGender(g.id)}
-                  className={`p-3 rounded-xl border text-left text-sm transition-all ${
-                    gender === g.id ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-border bg-surface text-muted hover:border-sky-200'
-                  }`}>
-                  <span className="mr-2">{g.icon}</span>{g.label}
-                </button>
-              ))}
+        <div className="p-6 space-y-4">
+          {/* Body Fat Estimation */}
+          {bf && (
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-sky-600">{bf}%</div>
+              <div className="text-xs text-sky-500 mt-1">Estimated Body Fat (Navy Method)</div>
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Weight (kg)" value={weight} onChange={setWeight} placeholder="75.5" />
+            <Field label="Neck (cm)" value={neck} onChange={setNeck} placeholder="38" />
+            <Field label="Waist (cm)" value={waist} onChange={setWaist} placeholder="82" />
+            <Field label="Hip (cm)" value={hip} onChange={setHip} placeholder="95" />
+            <Field label="Chest (cm)" value={chest} onChange={setChest} placeholder="100" />
+            <div></div>
+            <Field label="Left Arm (cm)" value={lArm} onChange={setLArm} placeholder="35" />
+            <Field label="Right Arm (cm)" value={rArm} onChange={setRArm} placeholder="35.5" />
+            <Field label="Left Thigh (cm)" value={lThigh} onChange={setLThigh} placeholder="55" />
+            <Field label="Right Thigh (cm)" value={rThigh} onChange={setRThigh} placeholder="55.5" />
+          </div>
+
+          <div>
+            <label className="block text-[11px] text-muted mb-1">Notes</label>
+            <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Morning, fasted"
+              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-dark text-sm focus:outline-none focus:border-sky-400" />
+          </div>
+
+          <div className="bg-surface rounded-xl p-3 text-xs text-dim leading-relaxed">
+            💡 <strong>Navy Method:</strong> Enter neck, waist{profile?.gender === 'female' ? ', hip' : ''} and your height to estimate body fat %. For best accuracy, measure in the morning before eating.
           </div>
         </div>
         <div className="flex gap-3 p-6 border-t border-border">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted hover:bg-surface text-sm font-medium">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+            className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save Measurement'}</button>
         </div>
       </div>
     </div>
@@ -81,119 +515,7 @@ function BodyDataModal({ profile, onClose, onSave }) {
 }
 
 // =============================================
-// ACTIVITY CALENDAR (GitHub-Style)
-// Zeigt die letzten 12 Wochen als Grid
-// =============================================
-function ActivityCalendar({ workoutDates }) {
-  // Letzte 84 Tage (12 Wochen) generieren
-  const days = []
-  const today = new Date()
-  for (let i = 83; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
-    const hasWorkout = workoutDates.includes(dateStr)
-    days.push({ date: dateStr, hasWorkout, dayOfWeek: date.getDay() })
-  }
-
-  // In Wochen gruppieren (7 Tage pro Spalte)
-  const weeks = []
-  for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7))
-  }
-
-  const monthLabels = []
-  let lastMonth = ''
-  weeks.forEach((week, i) => {
-    const firstDay = new Date(week[0].date)
-    const month = firstDay.toLocaleString('en', { month: 'short' })
-    if (month !== lastMonth) {
-      monthLabels.push({ index: i, label: month })
-      lastMonth = month
-    }
-  })
-
-  return (
-    <div>
-      <div className="text-sm font-medium text-dark mb-3">Activity (Last 12 Weeks)</div>
-      {/* Monatslabels */}
-      <div className="flex gap-[3px] mb-1 ml-0">
-        {weeks.map((_, i) => {
-          const label = monthLabels.find((m) => m.index === i)
-          return (
-            <div key={i} className="w-[14px] text-center">
-              {label && <span className="text-[9px] text-dim">{label.label}</span>}
-            </div>
-          )
-        })}
-      </div>
-      {/* Kalender Grid */}
-      <div className="flex gap-[3px]">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-[3px]">
-            {week.map((day, di) => (
-              <div
-                key={di}
-                title={`${day.date}${day.hasWorkout ? ' ✓' : ''}`}
-                className={`w-[14px] h-[14px] rounded-sm transition-colors ${
-                  day.hasWorkout
-                    ? 'bg-sky-400'
-                    : 'bg-surface border border-border/50'
-                }`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 mt-2">
-        <span className="text-[10px] text-dim">Less</span>
-        <div className="w-[10px] h-[10px] rounded-sm bg-surface border border-border/50" />
-        <div className="w-[10px] h-[10px] rounded-sm bg-sky-200" />
-        <div className="w-[10px] h-[10px] rounded-sm bg-sky-400" />
-        <span className="text-[10px] text-dim">More</span>
-      </div>
-    </div>
-  )
-}
-
-// =============================================
-// MINI BAR CHART
-// =============================================
-function MiniBarChart({ data, label }) {
-  const max = Math.max(...data.map((d) => d.value), 1)
-  return (
-    <div>
-      <div className="text-sm font-medium text-dark mb-3">{label}</div>
-      <div className="flex items-end gap-2 h-28">
-        {data.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="text-[10px] text-muted">{d.value}</div>
-            <div className="w-full bg-sky-400 rounded-t-md" style={{
-              height: `${(d.value / max) * 100}%`, minHeight: d.value > 0 ? '4px' : '0px',
-            }} />
-            <div className="text-[10px] text-dim">{d.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// =============================================
-// HELPER: Alter berechnen
-// =============================================
-function calculateAge(birthDate) {
-  if (!birthDate) return null
-  const today = new Date()
-  const birth = new Date(birthDate)
-  let age = today.getFullYear() - birth.getFullYear()
-  const m = today.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
-  return age
-}
-
-// =============================================
-// HAUPT-KOMPONENTE
+// MAIN COMPONENT
 // =============================================
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -201,415 +523,302 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [activeTab, setActiveTab] = useState('profile') // 'profile' | 'stats'
+  const [activeTab, setActiveTab] = useState('profile')
   const [editMode, setEditMode] = useState(false)
   const [showBodyModal, setShowBodyModal] = useState(false)
+  const [showTimelineModal, setShowTimelineModal] = useState(false)
+  const [showMeasureModal, setShowMeasureModal] = useState(false)
+  const [timelineFilter, setTimelineFilter] = useState(null)
 
-  // Editierbare Felder
   const [username, setUsername] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [bio, setBio] = useState('')
+  const [bioPublic, setBioPublic] = useState(false)
 
-  // Stats
-  const [workoutCount, setWorkoutCount] = useState(0)
-  const [weeklyData, setWeeklyData] = useState([])
-  const [monthlyData, setMonthlyData] = useState([])
+  const [statsRange, setStatsRange] = useState(30)
+  const [calendarRange, setCalendarRange] = useState(84)
   const [workoutDates, setWorkoutDates] = useState([])
-  const [xpData, setXpData] = useState([])
+  const [workoutCount, setWorkoutCount] = useState(0)
   const [achievementCount, setAchievementCount] = useState(0)
+  const [xpData, setXpData] = useState([])
+  const [workoutData, setWorkoutData] = useState([])
+  const [muscleData, setMuscleData] = useState([])
+  const [timeline, setTimeline] = useState([])
+  const [measurements, setMeasurements] = useState([])
+  const [weightHistory, setWeightHistory] = useState([])
 
-  useEffect(() => {
-    if (user) {
-      loadProfile()
-      loadStats()
-    }
-  }, [user])
+  useEffect(() => { if (user) { loadProfile(); loadTimeline(); loadMeasurements() } }, [user])
+  useEffect(() => { if (user) loadStats() }, [user, statsRange])
+  useEffect(() => { if (user) loadCalendar() }, [user, calendarRange])
 
   const loadProfile = async () => {
-    const { data } = await supabase
-      .from('profiles').select('*').eq('id', user.id).single()
-    if (data) {
-      setProfile(data)
-      setUsername(data.username || '')
-      setAvatarUrl(data.avatar_url || '')
-      // Wenn noch kein Username → direkt Edit-Mode
-      if (!data.username) setEditMode(true)
-    }
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    if (data) { setProfile(data); setUsername(data.username || ''); setAvatarUrl(data.avatar_url || ''); setBio(data.bio || ''); setBioPublic(data.bio_public ?? false); if (!data.username) setEditMode(true) }
     setLoading(false)
   }
 
+  const loadCalendar = async () => {
+    const { data } = await supabase.from('workout_logs').select('started_at').eq('user_id', user.id).gte('started_at', new Date(Date.now() - calendarRange * 86400000).toISOString())
+    setWorkoutDates((data || []).map(l => l.started_at?.split('T')[0]).filter(Boolean))
+  }
+
+  const loadMeasurements = async () => {
+    const { data } = await supabase.from('body_measurements').select('*').eq('user_id', user.id).order('measured_at', { ascending: false }).limit(20)
+    setMeasurements(data || [])
+    // Weight history for graph
+    const { data: wh } = await supabase.from('body_measurements').select('weight_kg, measured_at').eq('user_id', user.id).not('weight_kg', 'is', null).order('measured_at', { ascending: true }).limit(30)
+    setWeightHistory((wh || []).map(w => ({ label: new Date(w.measured_at).toLocaleDateString('en', { month: 'short', day: 'numeric' }), value: parseFloat(w.weight_kg) })))
+  }
+
   const loadStats = async () => {
-    // Total workouts
-    const { count } = await supabase
-      .from('workout_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+    const since = new Date(Date.now() - statsRange * 86400000)
+    const { count } = await supabase.from('workout_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('started_at', since.toISOString())
     setWorkoutCount(count || 0)
-
-    // Workout-Daten für Kalender
-    const { data: logs } = await supabase
-      .from('workout_logs').select('started_at').eq('user_id', user.id)
-      .gte('started_at', new Date(Date.now() - 84 * 24 * 60 * 60 * 1000).toISOString())
-    const dates = (logs || []).map((l) => l.started_at?.split('T')[0]).filter(Boolean)
-    setWorkoutDates([...new Set(dates)])
-
-    // Workouts pro Woche (letzte 8 Wochen)
-    const weeks = []
-    for (let i = 7; i >= 0; i--) {
-      const start = new Date()
-      start.setDate(start.getDate() - i * 7)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(start)
-      end.setDate(end.getDate() + 7)
-      const { count: wc } = await supabase
-        .from('workout_logs').select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('started_at', start.toISOString())
-        .lt('started_at', end.toISOString())
-      weeks.push({ label: `W${8 - i}`, value: wc || 0 })
-    }
-    setWeeklyData(weeks)
-
-    // Workouts pro Monat (letzte 6 Monate)
-    const months = []
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date()
-      d.setMonth(d.getMonth() - i)
-      const start = new Date(d.getFullYear(), d.getMonth(), 1)
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-      const { count: mc } = await supabase
-        .from('workout_logs').select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('started_at', start.toISOString())
-        .lt('started_at', end.toISOString())
-      months.push({ label: start.toLocaleString('en', { month: 'short' }), value: mc || 0 })
-    }
-    setMonthlyData(months)
-
-    // XP pro Woche (letzte 8 Wochen)
-    const xpWeeks = []
-    for (let i = 7; i >= 0; i--) {
-      const start = new Date()
-      start.setDate(start.getDate() - i * 7)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(start)
-      end.setDate(end.getDate() + 7)
-      const { data: xpRows } = await supabase
-        .from('xp_transactions').select('amount')
-        .eq('user_id', user.id)
-        .gte('created_at', start.toISOString())
-        .lt('created_at', end.toISOString())
-      const total = (xpRows || []).reduce((sum, r) => sum + (r.amount || 0), 0)
-      xpWeeks.push({ label: `W${8 - i}`, value: total })
-    }
-    setXpData(xpWeeks)
-
-    // Achievements count
-    const { count: ac } = await supabase
-      .from('user_achievements').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+    const { count: ac } = await supabase.from('user_achievements').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
     setAchievementCount(ac || 0)
+
+    const buckets = Math.min(statsRange <= 14 ? statsRange : 8, 12)
+    const bDays = Math.ceil(statsRange / buckets)
+    const xpB = [], wB = []
+    for (let i = buckets - 1; i >= 0; i--) {
+      const s = new Date(Date.now() - (i + 1) * bDays * 86400000), e = new Date(Date.now() - i * bDays * 86400000)
+      const lbl = bDays <= 1 ? e.toLocaleDateString('en', { weekday: 'short' }) : `${s.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`
+      const { data: xr } = await supabase.from('xp_transactions').select('amount').eq('user_id', user.id).gte('created_at', s.toISOString()).lt('created_at', e.toISOString())
+      xpB.push({ label: lbl, value: (xr || []).reduce((s, r) => s + (r.amount || 0), 0) })
+      const { count: wc } = await supabase.from('workout_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('started_at', s.toISOString()).lt('started_at', e.toISOString())
+      wB.push({ label: lbl, value: wc || 0 })
+    }
+    setXpData(xpB); setWorkoutData(wB)
+
+    const { data: eL } = await supabase.from('exercise_logs').select('exercise_id, reps_completed').gte('created_at', since.toISOString())
+    if (eL?.length) {
+      const ids = [...new Set(eL.map(l => l.exercise_id))]
+      const { data: exs } = await supabase.from('exercises').select('id, category').in('id', ids)
+      const cm = Object.fromEntries((exs || []).map(e => [e.id, e.category]))
+      const c = { push: 0, pull: 0, legs: 0, core: 0, cardio: 0, flexibility: 0 }
+      eL.forEach(l => { const cat = cm[l.exercise_id]; if (cat && c[cat] !== undefined) c[cat] += (l.reps_completed || 1) })
+      setMuscleData(Object.entries(c).map(([k, v]) => ({ label: k.charAt(0).toUpperCase() + k.slice(1), value: v })))
+    } else setMuscleData([{ label: 'Push', value: 0 }, { label: 'Pull', value: 0 }, { label: 'Legs', value: 0 }, { label: 'Core', value: 0 }, { label: 'Cardio', value: 0 }, { label: 'Flex', value: 0 }])
+  }
+
+  const loadTimeline = async () => {
+    const { data } = await supabase.from('progress_timeline').select('*').eq('user_id', user.id).order('created_at', { ascending: true }).limit(100)
+    setTimeline(data || [])
   }
 
   const handleSaveProfile = async () => {
-    setSaving(true)
-    setMessage('')
-
-    if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      setMessage('Error: 3-20 chars, letters, numbers and _ only')
-      setSaving(false)
-      return
-    }
-
+    setSaving(true); setMessage('')
+    if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) { setMessage('Error: 3-20 chars, letters, numbers, _ only'); setSaving(false); return }
     if (username && username !== profile?.username) {
-      const { data: existing } = await supabase
-        .from('profiles').select('username').eq('username', username.toLowerCase()).neq('id', user.id).maybeSingle()
-      if (existing) {
-        setMessage('Error: Username is already taken')
-        setSaving(false)
-        return
-      }
+      const { data: ex } = await supabase.from('profiles').select('username').eq('username', username.toLowerCase()).neq('id', user.id).maybeSingle()
+      if (ex) { setMessage('Error: Username taken'); setSaving(false); return }
     }
-
-    const { error } = await supabase.from('profiles').update({
-      username: username.toLowerCase() || null,
-      display_name: username || null,
-      avatar_url: avatarUrl || null,
-    }).eq('id', user.id)
-
-    if (error) {
-      setMessage('Error: ' + error.message)
-    } else {
-      setMessage('Profile saved!')
-      setEditMode(false)
-      await loadProfile()
-      setTimeout(() => setMessage(''), 3000)
-    }
+    const { error } = await supabase.from('profiles').update({ username: username.toLowerCase() || null, display_name: username || null, avatar_url: avatarUrl || null, bio: bio || null, bio_public: bioPublic }).eq('id', user.id)
+    error ? setMessage('Error: ' + error.message) : (setMessage('Saved!'), setEditMode(false), await loadProfile(), setTimeout(() => setMessage(''), 3000))
     setSaving(false)
   }
 
-  const handleSaveBodyData = async (bodyData) => {
-    await supabase.from('profiles').update(bodyData).eq('id', user.id)
-    await loadProfile()
-  }
+  const handleSaveBodyData = async (d) => { await supabase.from('profiles').update(d).eq('id', user.id); await loadProfile() }
+  const handleSaveMeasurement = async (d) => { await supabase.from('body_measurements').insert({ user_id: user.id, ...d }); await loadMeasurements() }
+  const handleAddTimeline = async (e) => { await supabase.from('progress_timeline').insert({ user_id: user.id, ...e }); await loadTimeline() }
+  const handleDeleteTimeline = async (id) => { await supabase.from('progress_timeline').delete().eq('id', id); await loadTimeline() }
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-muted">Loading...</div></div>
-  }
+  const league = useMemo(() => getLeague(profile?.xp_total || 0), [profile?.xp_total])
+  const latestMeasure = measurements[0]
 
-  const age = calculateAge(profile?.birth_date)
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="text-muted">Loading...</div></div>
 
   return (
-    <div className="max-w-4xl">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-black text-dark">Profile</h1>
-      </div>
+    <div className="max-w-5xl">
+      <div className="mb-6"><h1 className="text-3xl font-black text-dark">Profile</h1></div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 mb-6">
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            activeTab === 'profile' ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
-            activeTab === 'stats' ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'
-          }`}
-        >
-          Stats & Progress
-        </button>
+      <div className="flex gap-1 bg-surface border border-border rounded-xl p-1 mb-6">
+        {['profile', 'stats'].map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>
+            {tab === 'profile' ? 'Profile' : 'Stats & Progress'}
+          </button>
+        ))}
       </div>
 
-      {/* Message */}
-      {message && (
-        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${
-          message.startsWith('Error') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'
-        }`}>{message}</div>
-      )}
+      {message && <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${message.startsWith('Error') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'}`}>{message}</div>}
 
-      {/* =============================================
-          TAB: PROFILE
-          ============================================= */}
+      {/* ============ PROFILE TAB ============ */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Links: Profil Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white border border-border rounded-xl p-6">
-              {/* Edit / View Toggle */}
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-dark">Personal Info</h2>
-                {!editMode && profile?.username && (
-                  <button onClick={() => setEditMode(true)}
-                    className="text-sky-500 hover:text-sky-600 text-sm font-medium">
-                    Edit
-                  </button>
-                )}
-              </div>
+        <div className="space-y-6">
+          {/* Personal Info + Body Data */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-dark">Personal Info</h2>
+              {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-sky-500 hover:text-sky-600 text-sm font-medium">Edit</button>}
+            </div>
 
-              {editMode ? (
-                /* ===== EDIT MODE ===== */
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-muted mb-2">Avatar URL</label>
-                    <div className="flex gap-3 items-center">
-                      <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center text-2xl overflow-hidden border border-border flex-shrink-0">
-                        {avatarUrl ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" /> : '👤'}
-                      </div>
-                      <input type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)}
-                        placeholder="https://example.com/avatar.jpg"
-                        className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+            {editMode ? (
+              <div className="space-y-4">
+                <div><label className="block text-sm text-muted mb-2">Avatar URL</label><div className="flex gap-3 items-center"><div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">{avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}</div><input type="url" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div></div>
+                <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
+                <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly</span></label></div>
+                <div className="flex gap-3">
+                  {profile?.username && <button onClick={() => { setEditMode(false); setUsername(profile.username || ''); setAvatarUrl(profile.avatar_url || ''); setBio(profile.bio || '') }} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>}
+                  <button onClick={handleSaveProfile} disabled={saving} className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-start gap-5 mb-6">
+                  <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center text-4xl overflow-hidden border-2 border-border flex-shrink-0">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" /> : '👤'}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="text-xl font-black text-dark">{profile?.username || 'No username'}</h3>
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${league.bg} ${league.color}`}>{league.emoji} {league.name}</span>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-muted mb-2">Username</label>
-                    <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-                      placeholder="e.g. fitnessbeast42"
-                      className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
-                    <p className="text-xs text-dim mt-1">3-20 characters, letters, numbers and _</p>
-                  </div>
-                  <div className="flex gap-3">
-                    {profile?.username && (
-                      <button onClick={() => { setEditMode(false); setUsername(profile.username || ''); setAvatarUrl(profile.avatar_url || '') }}
-                        className="flex-1 py-3 rounded-xl border border-border text-muted hover:bg-surface text-sm font-medium">
-                        Cancel
-                      </button>
+                    <div className="text-sm text-muted mt-1">{[profile?.gender && profile.gender !== 'prefer_not_to_say' ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : null, calcAge(profile?.birth_date) ? `${calcAge(profile.birth_date)} years` : null, profile?.fitness_level ? profile.fitness_level.charAt(0).toUpperCase() + profile.fitness_level.slice(1) : null].filter(Boolean).join(' · ') || 'No info set'}</div>
+                    {profile?.bio && <p className="text-sm text-muted mt-2 italic">"{profile.bio}"</p>}
+                    {league.next && (
+                      <div className="mt-3"><div className="flex justify-between text-xs mb-1"><span className="text-muted">{league.emoji} {league.name}</span><span className="text-muted">{league.next.emoji} {league.next.name}</span></div><div className="h-2 bg-surface rounded-full overflow-hidden"><div className="h-full bg-sky-400 rounded-full" style={{ width: `${Math.min(((profile?.xp_total || 0) - league.min) / (league.next.min - league.min) * 100, 100)}%` }} /></div><div className="text-xs text-dim mt-1">{profile?.xp_total || 0} / {league.next.min} XP</div></div>
                     )}
-                    <button onClick={handleSaveProfile} disabled={saving}
-                      className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">
-                      {saving ? 'Saving...' : 'Save'}
-                    </button>
                   </div>
                 </div>
-              ) : (
-                /* ===== VIEW MODE ===== */
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center text-4xl overflow-hidden border-2 border-border flex-shrink-0">
-                    {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" /> : '👤'}
+                {/* Body Data inline */}
+                <div className="border-t border-border pt-5">
+                  <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-dark">Body Data</h3><button onClick={() => setShowBodyModal(true)} className="text-sky-500 text-xs font-medium">Edit</button></div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[{ l: 'Weight', v: profile?.weight_kg ? `${profile.weight_kg} kg` : '—' }, { l: 'Height', v: profile?.height_cm ? `${profile.height_cm} cm` : '—' }, { l: 'Age', v: calcAge(profile?.birth_date) ? `${calcAge(profile.birth_date)}y` : '—' }, { l: 'Body Fat', v: latestMeasure?.body_fat_pct ? `${latestMeasure.body_fat_pct}%` : '—' }].map((d, i) => (
+                      <div key={i} className="bg-surface rounded-xl p-3 text-center"><div className="text-base font-bold text-dark">{d.v}</div><div className="text-[10px] text-dim mt-0.5">{d.l}</div></div>
+                    ))}
                   </div>
-                  <div>
-                    <div className="text-xl font-black text-dark">
-                      {profile?.username || 'No username'}
-                    </div>
-                    <div className="text-sm text-muted mt-0.5">
-                      {[
-                        profile?.gender && profile.gender !== 'prefer_not_to_say'
-                          ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
-                          : null,
-                        age ? `${age} years` : null,
-                      ].filter(Boolean).join(', ') || 'No info set yet'}
-                    </div>
-                    {profile?.fitness_level && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 rounded-full text-xs font-medium text-sky-600">
-                        {profile.fitness_level === 'advanced' ? '🔥' : profile.fitness_level === 'intermediate' ? '💪' : '🌱'}
-                        {profile.fitness_level.charAt(0).toUpperCase() + profile.fitness_level.slice(1)}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Body Measurements */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-dark">Body Measurements</h2>
+              <button onClick={() => setShowMeasureModal(true)} className="px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-xs font-semibold hover:bg-sky-100">+ New Measurement</button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Weight Graph */}
+              <AreaChart data={weightHistory} label="Weight Over Time" color="#8b5cf6" unit=" kg" />
+
+              {/* Latest Circumferences */}
+              <div>
+                <div className="text-sm font-semibold text-dark mb-3">Latest Measurements</div>
+                {latestMeasure ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { l: 'Neck', v: latestMeasure.neck_cm }, { l: 'Chest', v: latestMeasure.chest_cm },
+                      { l: 'Waist', v: latestMeasure.waist_cm }, { l: 'Hip', v: latestMeasure.hip_cm },
+                      { l: 'L Arm', v: latestMeasure.left_arm_cm }, { l: 'R Arm', v: latestMeasure.right_arm_cm },
+                      { l: 'L Thigh', v: latestMeasure.left_thigh_cm }, { l: 'R Thigh', v: latestMeasure.right_thigh_cm },
+                    ].map((m, i) => (
+                      <div key={i} className="flex justify-between items-center py-1.5 px-2 bg-surface rounded-lg">
+                        <span className="text-xs text-muted">{m.l}</span>
+                        <span className="text-xs font-semibold text-dark">{m.v ? `${m.v} cm` : '—'}</span>
+                      </div>
+                    ))}
+                    {latestMeasure.body_fat_pct && (
+                      <div className="col-span-2 flex justify-between items-center py-2 px-3 bg-sky-50 rounded-lg border border-sky-200">
+                        <span className="text-xs text-sky-600 font-medium">Body Fat (est.)</span>
+                        <span className="text-sm font-bold text-sky-600">{latestMeasure.body_fat_pct}%</span>
                       </div>
                     )}
+                    <div className="col-span-2 text-[10px] text-dim mt-1">
+                      Measured {new Date(latestMeasure.measured_at).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {latestMeasure.notes && ` · ${latestMeasure.notes}`}
+                    </div>
                   </div>
+                ) : (
+                  <div className="text-center py-6"><div className="text-2xl mb-1">📏</div><p className="text-xs text-muted">No measurements yet</p></div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Calendar */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-dark">Activity Calendar</h2>
+              <div className="flex gap-1 bg-surface rounded-lg p-0.5">
+                {[{ l: '3M', d: 84 }, { l: '6M', d: 168 }, { l: '1Y', d: 365 }].map(p => (
+                  <button key={p.d} onClick={() => setCalendarRange(p.d)} className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${calendarRange === p.d ? 'bg-white text-dark shadow-sm' : 'text-muted'}`}>{p.l}</button>
+                ))}
+              </div>
+            </div>
+            <ActivityCalendar workoutDates={workoutDates} days={calendarRange} />
+          </div>
+
+          {/* Progress Timeline (Horizontal) */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-dark">Progress Timeline</h2>
+              <button onClick={() => setShowTimelineModal(true)} className="px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-xs font-semibold hover:bg-sky-100">+ Add Entry</button>
+            </div>
+            <HorizontalTimeline entries={timeline} onDelete={handleDeleteTimeline} filter={timelineFilter} onFilterChange={setTimelineFilter} />
+          </div>
+        </div>
+      )}
+
+      {/* ============ STATS TAB ============ */}
+      {activeTab === 'stats' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-lg font-bold text-dark">Your Progress</h2>
+            <DateRangePicker range={statsRange} onChange={setStatsRange} />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white border border-sky-200 rounded-xl p-4 text-center"><div className="text-2xl font-black text-sky-500">{profile?.xp_total || 0}</div><div className="text-xs text-sky-400 mt-1">Total XP</div></div>
+            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{workoutCount}</div><div className="text-xs text-muted mt-1">Workouts</div></div>
+            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{profile?.current_streak || 0} 🔥</div><div className="text-xs text-muted mt-1">Streak</div></div>
+            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{achievementCount}</div><div className="text-xs text-muted mt-1">Achievements</div></div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={xpData} label="XP Earned" color="#38bdf8" /></div>
+            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={workoutData} label="Workouts" color="#34d399" /></div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white border border-border rounded-2xl p-6"><BarChart data={workoutData} label="Workout Frequency" /></div>
+            <div className="bg-white border border-border rounded-2xl p-6"><RadarChart data={muscleData} /></div>
+          </div>
+
+          {/* Weight + Body Fat Trends */}
+          {(weightHistory.length > 0 || measurements.some(m => m.body_fat_pct)) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {weightHistory.length > 0 && (
+                <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={weightHistory} label="Weight Trend" color="#8b5cf6" unit=" kg" /></div>
+              )}
+              {measurements.filter(m => m.body_fat_pct).length > 0 && (
+                <div className="bg-white border border-border rounded-2xl p-6">
+                  <AreaChart data={measurements.filter(m => m.body_fat_pct).reverse().map(m => ({
+                    label: new Date(m.measured_at).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+                    value: parseFloat(m.body_fat_pct)
+                  }))} label="Body Fat %" color="#f59e0b" unit="%" />
                 </div>
               )}
             </div>
+          )}
 
-            {/* Activity Calendar */}
-            <div className="bg-white border border-border rounded-xl p-6">
-              <ActivityCalendar workoutDates={workoutDates} />
-            </div>
-          </div>
-
-          {/* Rechts: Body Data + Quick Stats */}
-          <div className="space-y-6">
-            {/* Body Data */}
-            <div className="bg-white border border-border rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-dark">Body Data</h2>
-                <button onClick={() => setShowBodyModal(true)}
-                  className="text-sky-500 hover:text-sky-600 text-sm font-medium">Edit</button>
-              </div>
-              <div className="space-y-1">
-                <DataRow label="Weight" value={profile?.weight_kg ? `${profile.weight_kg} kg` : '—'} />
-                <DataRow label="Height" value={profile?.height_cm ? `${profile.height_cm} cm` : '—'} />
-                <DataRow label="Age" value={age ? `${age} years` : '—'} />
-                <DataRow label="Gender" value={profile?.gender ? profile.gender.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—'} />
-                {profile?.weight_kg && profile?.height_cm && (
-                  <DataRow label="BMI" value={(profile.weight_kg / (profile.height_cm / 100) ** 2).toFixed(1)} />
-                )}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="bg-white border border-border rounded-xl p-6">
-              <h2 className="text-lg font-bold text-dark mb-4">Quick Stats</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-sky-50 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-sky-600">{profile?.xp_total || 0}</div>
-                  <div className="text-xs text-sky-500 mt-1">Total XP</div>
-                </div>
-                <div className="bg-surface rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-dark">{workoutCount}</div>
-                  <div className="text-xs text-muted mt-1">Workouts</div>
-                </div>
-                <div className="bg-surface rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-dark">{profile?.current_streak || 0} 🔥</div>
-                  <div className="text-xs text-muted mt-1">Streak</div>
-                </div>
-                <div className="bg-surface rounded-xl p-4 text-center">
-                  <div className="text-2xl font-black text-dark">{achievementCount}</div>
-                  <div className="text-xs text-muted mt-1">Achievements</div>
-                </div>
-              </div>
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="text-sm font-semibold text-dark mb-4">Goals</div>
+            <div className="space-y-4">
+              <ProgressBar label="Weekly Workouts" value={workoutData[workoutData.length - 1]?.value || 0} max={7} />
+              <ProgressBar label="Current Streak" value={profile?.current_streak || 0} max={Math.max(profile?.longest_streak || 7, 7)} />
+              <ProgressBar label="Achievements" value={achievementCount} max={Math.max(achievementCount + 5, 10)} color="bg-amber-400" />
+              {league.next && <ProgressBar label={`${league.name} → ${league.next.name}`} value={profile?.xp_total || 0} max={league.next.min} color="bg-purple-400" />}
             </div>
           </div>
         </div>
       )}
 
-      {/* =============================================
-          TAB: STATS & PROGRESS
-          ============================================= */}
-      {activeTab === 'stats' && (
-        <div className="space-y-6">
-          {/* Top Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard label="Total XP" value={profile?.xp_total || 0} color="sky" />
-            <StatCard label="Workouts" value={workoutCount} />
-            <StatCard label="Current Streak" value={`${profile?.current_streak || 0} 🔥`} />
-            <StatCard label="Best Streak" value={profile?.longest_streak || 0} />
-          </div>
-
-          {/* Charts Row 1 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-xl p-6">
-              <MiniBarChart data={weeklyData} label="Workouts per Week (Last 8 Weeks)" />
-            </div>
-            <div className="bg-white border border-border rounded-xl p-6">
-              <MiniBarChart data={monthlyData} label="Workouts per Month (Last 6 Months)" />
-            </div>
-          </div>
-
-          {/* Charts Row 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-xl p-6">
-              <MiniBarChart data={xpData} label="XP Earned per Week" />
-            </div>
-            <div className="bg-white border border-border rounded-xl p-6">
-              <div className="text-sm font-medium text-dark mb-4">Overview</div>
-              <div className="space-y-3">
-                <ProgressBar label="Workouts this week" value={weeklyData[weeklyData.length - 1]?.value || 0} max={7} />
-                <ProgressBar label="Current Streak" value={profile?.current_streak || 0} max={Math.max(profile?.longest_streak || 7, 7)} />
-                <ProgressBar label="Achievements" value={achievementCount} max={Math.max(achievementCount, 10)} />
-              </div>
-            </div>
-          </div>
-
-          {/* Activity Calendar (auch im Stats Tab) */}
-          <div className="bg-white border border-border rounded-xl p-6">
-            <ActivityCalendar workoutDates={workoutDates} />
-          </div>
-        </div>
-      )}
-
-      {/* Body Data Modal */}
-      {showBodyModal && (
-        <BodyDataModal profile={profile} onClose={() => setShowBodyModal(false)} onSave={handleSaveBodyData} />
-      )}
-    </div>
-  )
-}
-
-// =============================================
-// HELPER COMPONENTS
-// =============================================
-
-function DataRow({ label, value }) {
-  return (
-    <div className="flex justify-between items-center py-2 border-b border-border last:border-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="text-sm font-medium text-dark">{value}</span>
-    </div>
-  )
-}
-
-function StatCard({ label, value, color }) {
-  const isColored = color === 'sky'
-  return (
-    <div className={`rounded-xl p-5 text-center ${isColored ? 'bg-sky-50 border border-sky-200' : 'bg-white border border-border'}`}>
-      <div className={`text-2xl font-black ${isColored ? 'text-sky-600' : 'text-dark'}`}>{value}</div>
-      <div className={`text-xs mt-1 ${isColored ? 'text-sky-500' : 'text-muted'}`}>{label}</div>
-    </div>
-  )
-}
-
-function ProgressBar({ label, value, max }) {
-  const pct = Math.min((value / max) * 100, 100)
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span className="text-muted">{label}</span>
-        <span className="text-dark font-medium">{value}/{max}</span>
-      </div>
-      <div className="h-2 bg-surface rounded-full overflow-hidden">
-        <div className="h-full bg-sky-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-      </div>
+      {showBodyModal && <BodyDataModal profile={profile} onClose={() => setShowBodyModal(false)} onSave={handleSaveBodyData} />}
+      {showTimelineModal && <TimelineAddModal onClose={() => setShowTimelineModal(false)} onSave={handleAddTimeline} />}
+      {showMeasureModal && <MeasurementsModal profile={profile} onClose={() => setShowMeasureModal(false)} onSave={handleSaveMeasurement} />}
     </div>
   )
 }

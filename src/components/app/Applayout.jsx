@@ -1,12 +1,8 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
-// =============================================
-// Sidebar Navigation Items
-// Hier werden neue Seiten einfach hinzugefügt
-// =============================================
 const NAV_ITEMS = [
   { path: '/app',           label: 'Dashboard',  icon: '🏠', end: true },
   { path: '/app/workouts',  label: 'Workouts',   icon: '💪' },
@@ -20,20 +16,13 @@ export default function AppLayout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
+  const [collapsed, setCollapsed] = useState(false)
 
-  // Profil laden für Sidebar-Anzeige
   useEffect(() => {
-    const loadProfile = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('username, display_name, avatar_url, xp_total')
-        .eq('id', user.id)
-        .single()
-
-      setProfile(data)
+    if (user) {
+      supabase.from('profiles').select('*').eq('id', user.id).single()
+        .then(({ data }) => setProfile(data))
     }
-
-    if (user) loadProfile()
   }, [user])
 
   const handleSignOut = async () => {
@@ -43,60 +32,71 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-light flex">
-
-      {/* ========== SIDEBAR ========== */}
-      <aside className="w-64 bg-white border-r border-border flex flex-col fixed h-full">
-
-        {/* Logo */}
-        <div className="p-6 border-b border-border">
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 h-full bg-white border-r border-border flex flex-col z-40 transition-all duration-300 ${
+        collapsed ? 'w-[72px]' : 'w-64'
+      }`}>
+        {/* Logo + Collapse Toggle */}
+        <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           <NavLink to="/app" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-sky-400 to-sky-500 rounded-lg flex items-center justify-center font-black text-white text-sm">
+            <div className="w-9 h-9 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">
               G
             </div>
-            <span className="text-lg font-black tracking-tight text-dark">
-              Gainly
-            </span>
+            {!collapsed && <span className="font-black text-dark text-lg">Gainly</span>}
           </NavLink>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className={`w-7 h-7 rounded-lg bg-surface hover:bg-border flex items-center justify-center text-muted text-xs transition-all ${
+              collapsed ? 'absolute -right-3.5 top-6 bg-white border border-border shadow-sm' : ''
+            }`}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '▶' : '◀'}
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 px-3 py-2 space-y-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.end}
+              title={collapsed ? item.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                `w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                   isActive
-                    ? 'bg-sky-50 text-sky-600 border border-sky-200'
+                    ? 'bg-sky-50 text-sky-600 border border-sky-200 font-semibold'
                     : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
                 }`
               }
             >
-              <span className="text-lg">{item.icon}</span>
-              {item.label}
+              <span className="text-lg flex-shrink-0">{item.icon}</span>
+              {!collapsed && item.label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Bottom Section */}
-        <div className="p-4 border-t border-border">
+        {/* Bottom */}
+        <div className="p-3 border-t border-border space-y-1">
           {/* XP Badge */}
           {profile && (
-            <div className="flex items-center gap-2 px-4 py-2 mb-3 bg-sky-50 rounded-lg">
+            <div className={`flex items-center gap-2 px-3 py-2 bg-sky-50 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
               <span className="text-xs">⚡</span>
-              <span className="text-sky-600 text-sm font-bold">
-                {profile.xp_total || 0} XP
-              </span>
+              {!collapsed && (
+                <span className="text-sky-600 text-sm font-bold">
+                  {profile.xp_total || 0} XP
+                </span>
+              )}
             </div>
           )}
 
           {/* Settings */}
           <NavLink
             to="/app/settings"
+            title={collapsed ? 'Settings' : undefined}
             className={({ isActive }) =>
-              `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
+              `w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                 isActive
                   ? 'bg-sky-50 text-sky-600 border border-sky-200'
                   : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
@@ -104,22 +104,23 @@ export default function AppLayout() {
             }
           >
             <span className="text-lg">⚙️</span>
-            Settings
+            {!collapsed && 'Settings'}
           </NavLink>
 
-          {/* Logout */}
+          {/* Sign Out */}
           <button
             onClick={handleSignOut}
-            className="w-full mt-2 flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-muted hover:bg-red-50 hover:text-red-500 transition-all"
+            title={collapsed ? 'Sign Out' : undefined}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-sm text-muted hover:bg-red-50 hover:text-red-500 transition-all`}
           >
             <span className="text-lg">🚪</span>
-            Sign Out
+            {!collapsed && 'Sign Out'}
           </button>
         </div>
       </aside>
 
-      {/* ========== MAIN CONTENT ========== */}
-      <main className="flex-1 ml-64 p-8">
+      {/* Main Content */}
+      <main className={`flex-1 p-8 transition-all duration-300 ${collapsed ? 'ml-[72px]' : 'ml-64'}`}>
         <Outlet />
       </main>
     </div>
