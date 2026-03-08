@@ -1,21 +1,17 @@
 import { useState } from 'react'
-import MyWorkouts from '../../components/workouts/MyWorkouts'
-import ExerciseLibrary from '../../components/workouts/ExerciseLibrary'
-import SkillTrees from '../../components/workouts/SkillTrees'
-import RandomGenerator from '../../components/workouts/RandomGenerator'
-import DailyGoal from '../../components/workouts/DailyGoal'
+import TrainTab from '../../components/workouts/TrainTab'
+import BuildTab from '../../components/workouts/BuildTab'
+import ExploreTab from '../../components/workouts/ExploreTab'
 import ActiveWorkout from '../../components/workouts/ActiveWorkout'
 
 const TABS = [
-  { id: 'my', label: 'My Workouts', icon: '🏋️' },
-  { id: 'library', label: 'Exercises', icon: '📚' },
-  { id: 'skills', label: 'Skill Trees', icon: '🌳' },
-  { id: 'random', label: 'Random', icon: '🎲' },
-  { id: 'daily', label: 'Daily Goal', icon: '⭐' },
+  { id: 'train', label: 'Train', icon: '⚡' },
+  { id: 'build', label: 'Build', icon: '🔨' },
+  { id: 'explore', label: 'Explore', icon: '🌳' },
 ]
 
 export default function WorkoutsPage() {
-  const [activeTab, setActiveTab] = useState('my')
+  const [activeTab, setActiveTab] = useState('train')
   const [activeWorkout, setActiveWorkout] = useState(null)
 
   if (activeWorkout) {
@@ -23,29 +19,24 @@ export default function WorkoutsPage() {
   }
 
   return (
-    <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-black text-dark">Workouts</h1>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex gap-1 bg-surface border border-border rounded-xl p-1 mb-6 overflow-x-auto">
+    <div className="max-w-6xl">
+      <div className="flex gap-2 mb-6">
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-              activeTab === tab.id ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'
+            className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${
+              activeTab === tab.id
+                ? 'bg-dark text-white shadow-lg'
+                : 'bg-white border border-border text-muted hover:border-sky-200 hover:text-dark'
             }`}>
-            <span>{tab.icon}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="text-base">{tab.icon}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {activeTab === 'my' && <MyWorkouts onStartWorkout={setActiveWorkout} />}
-      {activeTab === 'library' && <ExerciseLibrary />}
-      {activeTab === 'skills' && <SkillTrees />}
-      {activeTab === 'random' && <RandomGenerator onStartWorkout={setActiveWorkout} />}
-      {activeTab === 'daily' && <DailyGoal />}
+      {activeTab === 'train' && <TrainTab onStartWorkout={setActiveWorkout} />}
+      {activeTab === 'build' && <BuildTab />}
+      {activeTab === 'explore' && <ExploreTab />}
     </div>
   )
-}
+} 

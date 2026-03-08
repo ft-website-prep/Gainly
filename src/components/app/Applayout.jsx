@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+import DailyGoalPopup from '../workouts/DailyGoalPopup'
 
 const NAV_ITEMS = [
   { path: '/app',           label: 'Dashboard',  icon: '🏠', end: true },
   { path: '/app/workouts',  label: 'Workouts',   icon: '💪' },
   { path: '/app/community', label: 'Community',  icon: '👥' },
-  { path: '/app/progress',  label: 'Progress',   icon: '📈' },
   { path: '/app/coach',     label: 'AI Coach',   icon: '🤖' },
   { path: '/app/profile',   label: 'Profile',    icon: '👤' },
 ]
@@ -123,6 +123,9 @@ export default function AppLayout() {
       <main className={`flex-1 p-8 transition-all duration-300 ${collapsed ? 'ml-[72px]' : 'ml-64'}`}>
         <Outlet />
       </main>
+
+      {/* Daily Goal Popup (shows once per session on login) */}
+      <DailyGoalPopup />
     </div>
   )
 }

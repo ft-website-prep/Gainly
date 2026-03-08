@@ -20,6 +20,7 @@ import CoachPage from './pages/app/CoachPage'
 import ProfilePage from './pages/app/ProfilePage'
 import SettingsPage from './pages/app/SettingsPage'
 
+
 function App() {
   return (
     <BrowserRouter>
