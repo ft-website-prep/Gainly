@@ -122,9 +122,9 @@ export default function ActiveWorkout({ workout, onFinish }) {
 
         <div className="bg-white border border-border rounded-2xl p-6 mb-6">
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-sky-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-sky-500">+{summary.xpEarned}</div>
-              <div className="text-xs text-sky-400">XP Earned</div>
+            <div className="bg-red-50 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-red-500">+{summary.xpEarned}</div>
+              <div className="text-xs text-red-400">XP Earned</div>
             </div>
             <div className="bg-surface rounded-xl p-4 text-center">
               <div className="text-2xl font-black text-dark">{formatTime(summary.totalDuration)}</div>
@@ -141,7 +141,7 @@ export default function ActiveWorkout({ workout, onFinish }) {
           </div>
         </div>
 
-        <button onClick={onFinish} className="px-8 py-3 bg-sky-500 text-white rounded-xl text-sm font-bold hover:bg-sky-600 shadow-lg shadow-sky-200">
+        <button onClick={onFinish} className="px-8 py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 shadow-lg shadow-red-200">
           Back to Workouts
         </button>
       </div>
@@ -158,7 +158,7 @@ export default function ActiveWorkout({ workout, onFinish }) {
         <div className="flex gap-3 justify-center">
           <button onClick={onFinish} className="px-6 py-3 border border-border rounded-xl text-muted text-sm">Discard</button>
           <button onClick={finishWorkout} disabled={saving}
-            className="px-6 py-3 bg-sky-500 text-white rounded-xl text-sm font-bold hover:bg-sky-600 shadow-lg shadow-sky-200 disabled:opacity-50">
+            className="px-6 py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 shadow-lg shadow-red-200 disabled:opacity-50">
             {saving ? 'Saving...' : 'Save & Finish'}
           </button>
         </div>
@@ -178,7 +178,7 @@ export default function ActiveWorkout({ workout, onFinish }) {
           <div className="relative w-40 h-40">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="42" fill="none" stroke="#f0f2f5" strokeWidth="6" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#38bdf8" strokeWidth="6"
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#e10600" strokeWidth="6"
                 strokeLinecap="round" strokeDasharray={`${(restTimer / (currentEx.rest_seconds || 60)) * 263.9} 263.9`} />
             </svg>
           </div>
@@ -190,7 +190,7 @@ export default function ActiveWorkout({ workout, onFinish }) {
             : exercises[currentExIdx + 1]?.name + ' – Set 1'
           }</strong>
         </p>
-        <button onClick={skipRest} className="px-6 py-2.5 bg-sky-50 text-sky-600 rounded-xl text-sm font-bold hover:bg-sky-100">Skip Rest →</button>
+        <button onClick={skipRest} className="px-6 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100">Skip Rest →</button>
       </div>
     )
   }
@@ -211,7 +211,7 @@ export default function ActiveWorkout({ workout, onFinish }) {
       {/* Exercise progress dots */}
       <div className="flex gap-1 mb-6 justify-center">
         {exercises.map((_, i) => (
-          <div key={i} className={`w-2 h-2 rounded-full ${i < currentExIdx ? 'bg-green-400' : i === currentExIdx ? 'bg-sky-500' : 'bg-gray-200'}`} />
+          <div key={i} className={`w-2 h-2 rounded-full ${i < currentExIdx ? 'bg-green-400' : i === currentExIdx ? 'bg-red-500' : 'bg-gray-200'}`} />
         ))}
       </div>
 
@@ -271,15 +271,15 @@ function RepsInput({ target, onLog }) {
     <div className="text-center">
       <div className="flex items-center justify-center gap-4 mb-4">
         <button onClick={() => setValue(Math.max(0, value - 1))}
-          className="w-12 h-12 bg-surface rounded-full text-xl font-bold text-muted hover:bg-sky-50 hover:text-sky-500 transition-all">−</button>
+          className="w-12 h-12 bg-surface rounded-full text-xl font-bold text-muted hover:bg-red-50 hover:text-red-500 transition-all">−</button>
         <input type="number" value={value} onChange={e => setValue(Math.max(0, parseInt(e.target.value) || 0))}
           className="w-20 text-center text-3xl font-black text-dark bg-transparent focus:outline-none" />
         <button onClick={() => setValue(value + 1)}
-          className="w-12 h-12 bg-surface rounded-full text-xl font-bold text-muted hover:bg-sky-50 hover:text-sky-500 transition-all">+</button>
+          className="w-12 h-12 bg-surface rounded-full text-xl font-bold text-muted hover:bg-red-50 hover:text-red-500 transition-all">+</button>
       </div>
       <div className="text-xs text-dim mb-4">Target: {target} reps</div>
       <button onClick={() => onLog(value)}
-        className="w-full py-3.5 bg-sky-500 text-white rounded-xl text-sm font-bold hover:bg-sky-600 shadow-lg shadow-sky-200">
+        className="w-full py-3.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 shadow-lg shadow-red-200">
         Log Set ✓
       </button>
     </div>
@@ -310,13 +310,13 @@ function TimeInput({ target, onLog }) {
 
       {/* Progress bar */}
       <div className="w-full h-2 bg-surface rounded-full mb-4 overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${seconds >= target ? 'bg-green-400' : 'bg-sky-400'}`}
+        <div className={`h-full rounded-full transition-all ${seconds >= target ? 'bg-green-400' : 'bg-red-400'}`}
           style={{ width: `${Math.min((seconds / target) * 100, 100)}%` }} />
       </div>
 
       {!running && seconds === 0 && (
         <button onClick={() => setRunning(true)}
-          className="w-full py-3.5 bg-sky-500 text-white rounded-xl text-sm font-bold hover:bg-sky-600 shadow-lg shadow-sky-200">
+          className="w-full py-3.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 shadow-lg shadow-red-200">
           ▶ Start Timer
         </button>
       )}
@@ -330,7 +330,7 @@ function TimeInput({ target, onLog }) {
         <div className="flex gap-2">
           <button onClick={() => setSeconds(0)} className="flex-1 py-3 border border-border rounded-xl text-muted text-sm">Reset</button>
           <button onClick={() => onLog(seconds)}
-            className="flex-1 py-3 bg-sky-500 text-white rounded-xl text-sm font-bold">Log {seconds}s ✓</button>
+            className="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-bold">Log {seconds}s ✓</button>
         </div>
       )}
     </div>

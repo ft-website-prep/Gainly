@@ -8,7 +8,7 @@ import DailyGoalWidget from '../../components/workouts/DailyGoalWidget'
 // =============================================
 // MINI LINE CHART (SVG)
 // =============================================
-function LineChart({ data, label, color = '#38bdf8' }) {
+function LineChart({ data, label, color = '#e10600' }) {
   if (!data || data.length === 0) return null
 
   const max = Math.max(...data.map((d) => d.value), 1)
@@ -61,7 +61,7 @@ function LineChart({ data, label, color = '#38bdf8' }) {
 const LEAGUES = [
   { min: 50000, name: 'Legend', emoji: 'crown', color: 'text-amber-500' },
   { min: 15000, name: 'Beast', emoji: 'fire', color: 'text-red-500' },
-  { min: 5000, name: 'Athlete', emoji: 'muscle', color: 'text-sky-500' },
+  { min: 5000, name: 'Athlete', emoji: 'muscle', color: 'text-red-500' },
   { min: 1000, name: 'Grinder', emoji: 'gear', color: 'text-gray-500' },
   { min: 0, name: 'Rookie', emoji: 'seedling', color: 'text-green-500' },
 ]
@@ -198,7 +198,7 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div className="bg-white border border-border rounded-xl p-4 text-center">
-          <div className="text-2xl font-black text-sky-500">{profile?.xp_total || 0}</div>
+          <div className="text-2xl font-black text-red-500">{profile?.xp_total || 0}</div>
           <div className="text-xs text-muted mt-1">Total XP</div>
         </div>
         <div className="bg-white border border-border rounded-xl p-4 text-center">
@@ -211,9 +211,9 @@ export default function Dashboard() {
           <div className="text-2xl font-black text-dark">{weekWorkouts}</div>
           <div className="text-xs text-muted mt-1">This Week</div>
         </div>
-        <div className="bg-gradient-to-br from-sky-500 to-blue-500 rounded-xl p-4 text-center text-white">
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-center text-white">
           <div className="text-2xl font-black">{EMOJI_MAP[league.emoji]} {league.name}</div>
-          <div className="text-xs text-sky-100 mt-1">Current League</div>
+          <div className="text-xs text-red-100 mt-1">Current League</div>
         </div>
       </div>
 
@@ -222,14 +222,14 @@ export default function Dashboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* XP Line Chart */}
           <div className="bg-white border border-border rounded-2xl p-6">
-            <LineChart data={xpWeekly} label="XP Progress" color="#38bdf8" />
+            <LineChart data={xpWeekly} label="XP Progress" color="#e10600" />
           </div>
 
           {/* Saved Workouts */}
           <div className="bg-white border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Your Workouts</h2>
-              <button onClick={() => navigate('/app/workouts')} className="text-sky-500 hover:text-sky-600 text-sm font-medium">
+              <button onClick={() => navigate('/app/workouts')} className="text-red-500 hover:text-red-600 text-sm font-medium">
                 {'View All ' + EMOJI_MAP.arrow}
               </button>
             </div>
@@ -237,10 +237,10 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {savedWorkouts.map((w) => (
                   <div key={w.id}
-                    className="flex items-center justify-between p-3.5 bg-surface rounded-xl hover:bg-sky-50 transition-colors cursor-pointer group"
+                    className="flex items-center justify-between p-3.5 bg-surface rounded-xl hover:bg-red-50 transition-colors cursor-pointer group"
                     onClick={() => navigate('/app/workouts')}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-white border border-border rounded-lg flex items-center justify-center text-lg group-hover:border-sky-200">
+                      <div className="w-9 h-9 bg-white border border-border rounded-lg flex items-center justify-center text-lg group-hover:border-red-200">
                         {EMOJI_MAP.muscle}
                       </div>
                       <div>
@@ -251,7 +251,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <span className="text-dim text-sm group-hover:text-sky-500">{EMOJI_MAP.play}</span>
+                    <span className="text-dim text-sm group-hover:text-red-500">{EMOJI_MAP.play}</span>
                   </div>
                 ))}
               </div>
@@ -259,7 +259,7 @@ export default function Dashboard() {
               <div className="text-center py-6">
                 <div className="text-3xl mb-2">{EMOJI_MAP.gym}</div>
                 <p className="text-sm text-muted mb-3">No saved workouts yet</p>
-                <button onClick={() => navigate('/app/workouts')} className="text-sm font-semibold text-sky-500 hover:text-sky-600">
+                <button onClick={() => navigate('/app/workouts')} className="text-sm font-semibold text-red-500 hover:text-red-600">
                   {'Create your first workout ' + EMOJI_MAP.arrow}
                 </button>
               </div>
@@ -272,7 +272,7 @@ export default function Dashboard() {
           <div className="bg-white border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Community</h2>
-              <button onClick={() => navigate('/app/community')} className="text-sky-500 hover:text-sky-600 text-sm font-medium">
+              <button onClick={() => navigate('/app/community')} className="text-red-500 hover:text-red-600 text-sm font-medium">
                 {'Open ' + EMOJI_MAP.arrow}
               </button>
             </div>
@@ -308,7 +308,7 @@ export default function Dashboard() {
               <div className="text-center py-6">
                 <div className="text-3xl mb-2">{EMOJI_MAP.people}</div>
                 <p className="text-sm text-muted mb-3">No posts yet</p>
-                <button onClick={() => navigate('/app/community')} className="text-sm font-semibold text-sky-500 hover:text-sky-600">
+                <button onClick={() => navigate('/app/community')} className="text-sm font-semibold text-red-500 hover:text-red-600">
                   {'Be the first to post ' + EMOJI_MAP.arrow}
                 </button>
               </div>
@@ -316,7 +316,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-6 text-white">
+          <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl p-6 text-white">
             <h2 className="font-bold text-base mb-3">Quick Start</h2>
             <div className="space-y-2">
               <button onClick={() => navigate('/app/workouts')} className="w-full flex items-center gap-3 p-3 bg-white/15 rounded-xl hover:bg-white/25 transition-colors text-left">

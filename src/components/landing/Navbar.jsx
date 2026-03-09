@@ -23,7 +23,7 @@ export default function Navbar() {
           {user ? (
             <Link
               to="/app"
-              className="bg-sky-500 hover:bg-sky-400 text-white font-bold text-sm px-5 py-2.5 rounded-lg transition-all"
+              className="bg-red-500 hover:bg-red-400 text-white font-bold text-sm px-5 py-2.5 rounded-lg transition-all"
             >
               Open App
             </Link>
@@ -37,7 +37,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/register"
-                className="bg-sky-500 hover:bg-sky-400 text-white font-bold text-sm px-5 py-2.5 rounded-lg transition-all"
+                className="bg-red-500 hover:bg-red-400 text-white font-bold text-sm px-5 py-2.5 rounded-lg transition-all"
               >
                 {LANDING.nav.signup}
               </Link>

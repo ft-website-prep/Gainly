@@ -9,7 +9,7 @@ export default function Features() {
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Tag */}
         <div className="text-center mb-16">
-          <span className="text-sky-500 text-xs font-bold tracking-widest uppercase">
+          <span className="text-red-500 text-xs font-bold tracking-widest uppercase">
             {LANDING.features.tag}
           </span>
         </div>
@@ -19,7 +19,7 @@ export default function Features() {
           {LANDING.features.items.map((feature, index) => (
             <div
               key={index}
-              className="group relative bg-white border border-border rounded-2xl p-8 hover:border-sky-300 hover:shadow-lg hover:shadow-sky-100/50 transition-all duration-300"
+              className="group relative bg-white border border-border rounded-2xl p-8 hover:border-red-300 hover:shadow-lg hover:shadow-red-100/50 transition-all duration-300"
             >
               <div className="text-5xl mb-6">{feature.icon}</div>
               <h3 className="text-xl font-bold text-dark mb-3">{feature.title}</h3>

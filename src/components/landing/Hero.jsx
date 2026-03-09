@@ -11,8 +11,8 @@ export default function Hero() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center pt-24">
         {/* Tag */}
-        <div className="inline-flex items-center gap-2 bg-sky-50 border border-sky-200 text-sky-600 text-xs font-bold tracking-widest px-4 py-2 rounded-full mb-8">
-          <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
+        <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-xs font-bold tracking-widest px-4 py-2 rounded-full mb-8">
+          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
           {LANDING.hero.tag}
         </div>
 
@@ -34,7 +34,7 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             to="/register"
-            className="w-full sm:w-auto bg-sky-500 hover:bg-sky-400 text-white font-bold text-lg px-8 py-4 rounded-xl transition-all hover:shadow-lg hover:shadow-sky-500/20"
+            className="w-full sm:w-auto bg-red-500 hover:bg-red-400 text-white font-bold text-lg px-8 py-4 rounded-xl transition-all hover:shadow-lg hover:shadow-sky-500/20"
           >
             {LANDING.hero.cta}
           </Link>

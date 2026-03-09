@@ -39,7 +39,7 @@ export default function AppLayout() {
         {/* Logo + Collapse Toggle */}
         <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           <NavLink to="/app" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">
               G
             </div>
             {!collapsed && <span className="font-black text-dark text-lg">Gainly</span>}
@@ -66,7 +66,7 @@ export default function AppLayout() {
               className={({ isActive }) =>
                 `w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                   isActive
-                    ? 'bg-sky-50 text-sky-600 border border-sky-200 font-semibold'
+                    ? 'bg-red-50 text-red-600 border border-red-200 font-semibold'
                     : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
                 }`
               }
@@ -81,10 +81,10 @@ export default function AppLayout() {
         <div className="p-3 border-t border-border space-y-1">
           {/* XP Badge */}
           {profile && (
-            <div className={`flex items-center gap-2 px-3 py-2 bg-sky-50 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
+            <div className={`flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
               <span className="text-xs">⚡</span>
               {!collapsed && (
-                <span className="text-sky-600 text-sm font-bold">
+                <span className="text-red-600 text-sm font-bold">
                   {profile.xp_total || 0} XP
                 </span>
               )}
@@ -98,7 +98,7 @@ export default function AppLayout() {
             className={({ isActive }) =>
               `w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                 isActive
-                  ? 'bg-sky-50 text-sky-600 border border-sky-200'
+                  ? 'bg-red-50 text-red-600 border border-red-200'
                   : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
               }`
             }

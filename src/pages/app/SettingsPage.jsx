@@ -6,7 +6,7 @@ function Toggle({ checked, onChange }) {
   return (
     <button onClick={() => onChange(!checked)}
       className={`w-12 h-7 rounded-full transition-all duration-200 relative flex-shrink-0 ${
-        checked ? 'bg-sky-500 shadow-sky-200 shadow-md' : 'bg-gray-200'
+        checked ? 'bg-red-500 shadow-red-200 shadow-md' : 'bg-gray-200'
       }`}>
       <div className="bg-white rounded-full shadow-md absolute top-[3px] transition-all duration-200"
         style={{ width: '22px', height: '22px', left: checked ? '23px' : '3px' }} />
@@ -33,7 +33,7 @@ function SettingRow({ icon, label, description, children }) {
 
 function Section({ title, icon, color, children }) {
   const colors = {
-    blue: 'from-sky-500 to-blue-500', purple: 'from-purple-500 to-indigo-500',
+    blue: 'from-red-500 to-red-600', purple: 'from-purple-500 to-indigo-500',
     green: 'from-emerald-500 to-teal-500', red: 'from-rose-500 to-red-500',
     amber: 'from-amber-500 to-orange-500',
   }
@@ -194,7 +194,7 @@ export default function SettingsPage() {
                 <div className="relative">
                   <input type="time" value={settings?.workout_reminder_time || '09:00'}
                     onChange={e => save({ workout_reminder_time: e.target.value })}
-                    className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-200 cursor-pointer" />
+                    className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-200 cursor-pointer" />
                 </div>
                 <span className="text-xs text-muted">every day</span>
               </div>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
         <Section title="App Settings" icon="⚙️" color="green">
           <SettingRow icon="🌐" label="Language" description="Preferred language">
             <select value={settings?.language || 'en'} onChange={e => save({ language: e.target.value })}
-              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-sky-400 cursor-pointer">
+              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 cursor-pointer">
               <option value="en">English</option>
               <option value="de">Deutsch</option>
             </select>
@@ -232,7 +232,7 @@ export default function SettingsPage() {
           </SettingRow>
           <SettingRow icon="📏" label="Units" description="Weight and distance">
             <select value={settings?.units || 'metric'} onChange={e => save({ units: e.target.value })}
-              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-sky-400 cursor-pointer">
+              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 cursor-pointer">
               <option value="metric">Metric (kg, km)</option>
               <option value="imperial">Imperial (lbs, mi)</option>
             </select>
@@ -258,7 +258,7 @@ export default function SettingsPage() {
           </SettingRow>
           <SettingRow icon="🕐" label="Default Rest Timer" description="Rest between sets">
             <select value={settings?.rest_timer_duration || 60} onChange={e => save({ rest_timer_duration: parseInt(e.target.value) })}
-              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-sky-400 cursor-pointer">
+              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 cursor-pointer">
               <option value={30}>30s</option><option value={60}>60s</option><option value={90}>90s</option><option value={120}>120s</option>
             </select>
           </SettingRow>
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                 <input type="email" value={settings?.report_email || user?.email || ''}
                   onChange={e => save({ report_email: e.target.value })}
                   placeholder="Email for reports"
-                  className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-200 w-full max-w-xs" />
+                  className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-200 w-full max-w-xs" />
               </div>
             )}
           </div>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
             </div>
             <div className="ml-[52px] flex gap-2 flex-wrap">
               <button onClick={handleExportJSON} disabled={saving}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-sky-50 text-sky-600 hover:bg-sky-100 transition-all disabled:opacity-50 flex items-center gap-2">
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all disabled:opacity-50 flex items-center gap-2">
                 📄 JSON Export
               </button>
               <button onClick={handleExportCSV} disabled={saving}
@@ -320,18 +320,18 @@ export default function SettingsPage() {
                 <div><div className="text-sm font-semibold text-dark">Change Password</div><div className="text-xs text-dim">Update login password</div></div>
               </div>
               <button onClick={() => setShowPasswordForm(!showPasswordForm)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${showPasswordForm ? 'bg-gray-100 text-muted' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}>
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${showPasswordForm ? 'bg-gray-100 text-muted' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
                 {showPasswordForm ? 'Cancel' : 'Change'}
               </button>
             </div>
             {showPasswordForm && (
               <div className="mt-4 ml-[52px] space-y-3">
                 <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password (min 6)"
-                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
                 <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm password"
-                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
                 <button onClick={handleChangePassword} disabled={saving}
-                  className="w-full py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50 shadow-lg shadow-sky-200">
+                  className="w-full py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50 shadow-lg shadow-red-200">
                   {saving ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
@@ -346,16 +346,16 @@ export default function SettingsPage() {
                 <div><div className="text-sm font-semibold text-dark">Change Email</div><div className="text-xs text-dim">{user?.email}</div></div>
               </div>
               <button onClick={() => setShowEmailForm(!showEmailForm)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${showEmailForm ? 'bg-gray-100 text-muted' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}>
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${showEmailForm ? 'bg-gray-100 text-muted' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
                 {showEmailForm ? 'Cancel' : 'Change'}
               </button>
             </div>
             {showEmailForm && (
               <div className="mt-4 ml-[52px] space-y-3">
                 <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="New email"
-                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
                 <button onClick={handleChangeEmail} disabled={saving}
-                  className="w-full py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50 shadow-lg shadow-sky-200">
+                  className="w-full py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50 shadow-lg shadow-red-200">
                   {saving ? 'Sending...' : 'Send Confirmation'}
                 </button>
               </div>

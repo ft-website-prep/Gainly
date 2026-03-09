@@ -101,7 +101,7 @@ export default function DailyGoalPopup() {
       {/* Popup */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Top accent */}
-        <div className="h-1.5 bg-gradient-to-r from-sky-400 to-blue-500" />
+        <div className="h-1.5 bg-gradient-to-r from-red-500 to-red-600" />
 
         <div className="p-6 text-center">
           <div className="text-4xl mb-3">{todaysGoal.icon}</div>
@@ -121,7 +121,7 @@ export default function DailyGoalPopup() {
                 Later
               </button>
               <button onClick={handleComplete} disabled={completing}
-                className="flex-1 py-3 bg-dark text-white rounded-xl text-xs font-bold hover:bg-sky-600 transition-all disabled:opacity-50">
+                className="flex-1 py-3 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-all disabled:opacity-50">
                 {completing ? 'Saving...' : 'Done ✓'}
               </button>
             </div>

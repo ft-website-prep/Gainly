@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabaseClient'
 const LEAGUES = [
   { name: 'Rookie', emoji: '🌱', min: 0, color: 'text-green-500', bg: 'bg-green-50' },
   { name: 'Grinder', emoji: '⚙️', min: 1000, color: 'text-gray-500', bg: 'bg-gray-50' },
-  { name: 'Athlete', emoji: '💪', min: 5000, color: 'text-sky-500', bg: 'bg-sky-50' },
+  { name: 'Athlete', emoji: '💪', min: 5000, color: 'text-red-500', bg: 'bg-red-50' },
   { name: 'Beast', emoji: '🔥', min: 15000, color: 'text-orange-500', bg: 'bg-orange-50' },
   { name: 'Legend', emoji: '👑', min: 50000, color: 'text-amber-500', bg: 'bg-amber-50' },
 ]
@@ -27,7 +27,7 @@ function calcAge(d) {
 // =============================================
 // SVG CHARTS
 // =============================================
-function AreaChart({ data, label, color = '#38bdf8', unit = '' }) {
+function AreaChart({ data, label, color = '#e10600', unit = '' }) {
   if (!data?.length || data.every(d => !d.value)) return <div className="text-sm text-dim text-center py-8">No data yet</div>
   const vals = data.map(d => d.value)
   const max = Math.max(...vals, 1), min = Math.min(...vals.filter(v => v > 0), 0)
@@ -56,7 +56,7 @@ function AreaChart({ data, label, color = '#38bdf8', unit = '' }) {
   )
 }
 
-function BarChart({ data, label, color = '#38bdf8' }) {
+function BarChart({ data, label, color = '#e10600' }) {
   if (!data?.length) return null
   const max = Math.max(...data.map(d => d.value), 1)
   return (
@@ -87,15 +87,15 @@ function RadarChart({ data, size = 200 }) {
       <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[220px] mx-auto">
         {grid.map((l, li) => { const ps = data.map((_, i) => pt(i, max * l)); return <polygon key={li} points={ps.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#e5e7eb" strokeWidth="0.5" /> })}
         {data.map((_, i) => { const p = pt(i, max); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#e5e7eb" strokeWidth="0.5" /> })}
-        <polygon points={dp.map(p => `${p.x},${p.y}`).join(' ')} fill="#38bdf8" fillOpacity="0.2" stroke="#38bdf8" strokeWidth="1.5" />
-        {dp.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke="#38bdf8" strokeWidth="1.5" />)}
+        <polygon points={dp.map(p => `${p.x},${p.y}`).join(' ')} fill="#e10600" fillOpacity="0.2" stroke="#e10600" strokeWidth="1.5" />
+        {dp.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="white" stroke="#e10600" strokeWidth="1.5" />)}
         {data.map((d, i) => { const p = pt(i, max * 1.28); return <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" className="text-[7px] fill-gray-500 font-medium">{d.label}</text> })}
       </svg>
     </div>
   )
 }
 
-function ProgressBar({ label, value, max, color = 'bg-sky-400' }) {
+function ProgressBar({ label, value, max, color = 'bg-red-400' }) {
   const pct = Math.min((value / Math.max(max, 1)) * 100, 100)
   return (
     <div>
@@ -149,7 +149,7 @@ function ActivityCalendar({ workoutDates, days = 84 }) {
               <div key={wi} className="flex flex-col gap-[3px]">
                 {week.map((day, di) => (
                   <div key={di} title={`${day.date} – ${day.count} workout${day.count !== 1 ? 's' : ''}`}
-                    className={`w-[13px] h-[13px] rounded-sm ${day.count >= 2 ? 'bg-sky-500' : day.count === 1 ? 'bg-sky-300' : 'bg-gray-100'}`} />
+                    className={`w-[13px] h-[13px] rounded-sm ${day.count >= 2 ? 'bg-red-500' : day.count === 1 ? 'bg-sky-300' : 'bg-gray-100'}`} />
                 ))}
               </div>
             ))}
@@ -158,7 +158,7 @@ function ActivityCalendar({ workoutDates, days = 84 }) {
       </div>
       <div className="flex items-center gap-1.5 mt-2">
         <span className="text-[9px] text-dim">Less</span>
-        <div className="w-[9px] h-[9px] rounded-sm bg-gray-100" /><div className="w-[9px] h-[9px] rounded-sm bg-sky-300" /><div className="w-[9px] h-[9px] rounded-sm bg-sky-500" />
+        <div className="w-[9px] h-[9px] rounded-sm bg-gray-100" /><div className="w-[9px] h-[9px] rounded-sm bg-sky-300" /><div className="w-[9px] h-[9px] rounded-sm bg-red-500" />
         <span className="text-[9px] text-dim">More</span>
       </div>
     </div>
@@ -201,13 +201,13 @@ function BodyMetricsModal({ profile, onClose, onSave }) {
     if (!v) return null
     if (gender === 'male') {
       if (v < 10) return { label: 'Essential', color: 'text-blue-500' }
-      if (v < 14) return { label: 'Athletic', color: 'text-sky-500' }
+      if (v < 14) return { label: 'Athletic', color: 'text-red-500' }
       if (v < 20) return { label: 'Fit', color: 'text-green-500' }
       if (v < 25) return { label: 'Average', color: 'text-amber-500' }
       return { label: 'Above Average', color: 'text-red-500' }
     } else {
       if (v < 18) return { label: 'Essential', color: 'text-blue-500' }
-      if (v < 22) return { label: 'Athletic', color: 'text-sky-500' }
+      if (v < 22) return { label: 'Athletic', color: 'text-red-500' }
       if (v < 28) return { label: 'Fit', color: 'text-green-500' }
       if (v < 32) return { label: 'Average', color: 'text-amber-500' }
       return { label: 'Above Average', color: 'text-red-500' }
@@ -235,7 +235,7 @@ function BodyMetricsModal({ profile, onClose, onSave }) {
             )}
             <input type="number" step="0.1" value={bmi} onChange={e => setBmi(e.target.value)}
               placeholder={autoBmi ? `Auto: ${autoBmi}` : 'e.g. 23.5'}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
             {bmiCat && (
               <div className={`text-xs mt-1.5 font-medium ${bmiCat.color}`}>→ {bmiCat.label}</div>
             )}
@@ -246,7 +246,7 @@ function BodyMetricsModal({ profile, onClose, onSave }) {
             <label className="block text-sm font-medium text-dark mb-2">Body Fat % (KFA)</label>
             <input type="number" step="0.1" value={kfa} onChange={e => setKfa(e.target.value)}
               placeholder="e.g. 15.0"
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
             {kfaCat && (
               <div className={`text-xs mt-1.5 font-medium ${kfaCat.color}`}>→ {kfaCat.label}</div>
             )}
@@ -258,7 +258,7 @@ function BodyMetricsModal({ profile, onClose, onSave }) {
         <div className="flex gap-3 p-6 border-t border-border">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">
+            className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -283,14 +283,14 @@ function BodyDataModal({ profile, onClose, onSave }) {
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-border"><h2 className="text-lg font-bold text-dark">Body Data</h2><button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button></div>
         <div className="p-6 space-y-4">
-          <div><label className="block text-sm text-muted mb-1.5">Weight (kg)</label><input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} placeholder="75.5" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
-          <div><label className="block text-sm text-muted mb-1.5">Height (cm)</label><input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="180" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
-          <div><label className="block text-sm text-muted mb-1.5">Date of Birth</label><input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
-          <div><label className="block text-sm text-muted mb-1.5">Gender</label><div className="grid grid-cols-2 gap-2">{GENDERS.map(g => <button key={g.id} onClick={() => setGender(g.id)} className={`p-2.5 rounded-xl border text-left text-sm ${gender === g.id ? 'border-sky-400 bg-sky-50 text-sky-700' : 'border-border bg-surface text-muted'}`}><span className="mr-1.5">{g.icon}</span>{g.label}</button>)}</div></div>
+          <div><label className="block text-sm text-muted mb-1.5">Weight (kg)</label><input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} placeholder="75.5" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Height (cm)</label><input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="180" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Date of Birth</label><input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div>
+          <div><label className="block text-sm text-muted mb-1.5">Gender</label><div className="grid grid-cols-2 gap-2">{GENDERS.map(g => <button key={g.id} onClick={() => setGender(g.id)} className={`p-2.5 rounded-xl border text-left text-sm ${gender === g.id ? 'border-red-400 bg-red-50 text-sky-700' : 'border-border bg-surface text-muted'}`}><span className="mr-1.5">{g.icon}</span>{g.label}</button>)}</div></div>
         </div>
         <div className="flex gap-3 p-6 border-t border-border">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
         </div>
       </div>
     </div>
@@ -348,7 +348,7 @@ function ProgressAddModal({ onClose, onSave }) {
             onDrop={handleDrop}
             onClick={() => fileRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-              dragging ? 'border-sky-400 bg-sky-50' : mediaUrl ? 'border-green-300 bg-green-50' : 'border-border hover:border-sky-300 hover:bg-sky-50/30'
+              dragging ? 'border-red-400 bg-red-50' : mediaUrl ? 'border-green-300 bg-green-50' : 'border-border hover:border-red-300 hover:bg-red-50/30'
             }`}
           >
             {mediaUrl ? (
@@ -374,20 +374,20 @@ function ProgressAddModal({ onClose, onSave }) {
             <label className="block text-sm text-muted mb-1.5">Title (optional)</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
               placeholder={`Default: ${new Date().toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}`}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
           </div>
 
           <div>
             <label className="block text-sm text-muted mb-1.5">Note (optional)</label>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)}
               placeholder="e.g. Week 8, feeling stronger"
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" />
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
           </div>
         </div>
         <div className="flex gap-3 p-6 border-t border-border">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>
           <button onClick={handleSave} disabled={saving || !mediaUrl}
-            className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">
+            className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">
             {saving ? 'Saving...' : 'Add to Timeline'}
           </button>
         </div>
@@ -409,7 +409,7 @@ function PhotoTimeline({ entries, onDelete }) {
           <div key={entry.id} className="flex-shrink-0 w-56 relative">
             {/* Dot */}
             <div className="flex justify-center mb-2">
-              <div className="w-4 h-4 bg-sky-400 rounded-full border-[3px] border-white shadow-md z-10 relative" />
+              <div className="w-4 h-4 bg-red-400 rounded-full border-[3px] border-white shadow-md z-10 relative" />
             </div>
             {/* Date */}
             <div className="text-center text-[10px] text-dim mb-2 font-medium">
@@ -560,7 +560,7 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-black text-dark">Profile</h1>
         <button onClick={() => setShowMetricsModal(true)}
-          className="px-4 py-2 bg-sky-50 text-sky-600 rounded-xl text-sm font-semibold hover:bg-sky-100 transition-colors flex items-center gap-2">
+          className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors flex items-center gap-2">
           📊 BMI / KFA
         </button>
       </div>
@@ -584,17 +584,17 @@ export default function ProfilePage() {
           <div className="bg-white border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-dark">Personal Info</h2>
-              {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-sky-500 hover:text-sky-600 text-sm font-medium">Edit</button>}
+              {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-red-500 hover:text-red-600 text-sm font-medium">Edit</button>}
             </div>
 
             {editMode ? (
               <div className="space-y-4">
-                <div><label className="block text-sm text-muted mb-2">Avatar URL</label><div className="flex gap-3 items-center"><div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">{avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}</div><input type="url" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div></div>
-                <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
-                <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
+                <div><label className="block text-sm text-muted mb-2">Avatar URL</label><div className="flex gap-3 items-center"><div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">{avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}</div><input type="url" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div></div>
+                <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
+                <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
                 <div className="flex gap-3">
                   {profile?.username && <button onClick={() => { setEditMode(false); setUsername(profile.username || ''); setAvatarUrl(profile.avatar_url || ''); setBio(profile.bio || '') }} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>}
-                  <button onClick={handleSaveProfile} disabled={saving} className="flex-1 py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+                  <button onClick={handleSaveProfile} disabled={saving} className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
                 </div>
               </div>
             ) : (
@@ -609,13 +609,13 @@ export default function ProfilePage() {
                     <div className="text-sm text-muted mt-1">{[profile?.gender && profile.gender !== 'prefer_not_to_say' ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : null, calcAge(profile?.birth_date) ? `${calcAge(profile.birth_date)} years` : null, profile?.fitness_level ? profile.fitness_level.charAt(0).toUpperCase() + profile.fitness_level.slice(1) : null].filter(Boolean).join(' · ') || 'No info set'}</div>
                     {profile?.bio && <p className="text-sm text-muted mt-2 italic">"{profile.bio}"</p>}
                     {league.next && (
-                      <div className="mt-3"><div className="flex justify-between text-xs mb-1"><span className="text-muted">{league.emoji} {league.name}</span><span className="text-muted">{league.next.emoji} {league.next.name}</span></div><div className="h-2 bg-surface rounded-full overflow-hidden"><div className="h-full bg-sky-400 rounded-full" style={{ width: `${Math.min(((profile?.xp_total || 0) - league.min) / (league.next.min - league.min) * 100, 100)}%` }} /></div><div className="text-xs text-dim mt-1">{profile?.xp_total || 0} / {league.next.min} XP</div></div>
+                      <div className="mt-3"><div className="flex justify-between text-xs mb-1"><span className="text-muted">{league.emoji} {league.name}</span><span className="text-muted">{league.next.emoji} {league.next.name}</span></div><div className="h-2 bg-surface rounded-full overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{ width: `${Math.min(((profile?.xp_total || 0) - league.min) / (league.next.min - league.min) * 100, 100)}%` }} /></div><div className="text-xs text-dim mt-1">{profile?.xp_total || 0} / {league.next.min} XP</div></div>
                     )}
                   </div>
                 </div>
                 {/* Body Data */}
                 <div className="border-t border-border pt-5">
-                  <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-dark">Body Data</h3><button onClick={() => setShowBodyModal(true)} className="text-sky-500 text-xs font-medium">Edit</button></div>
+                  <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-dark">Body Data</h3><button onClick={() => setShowBodyModal(true)} className="text-red-500 text-xs font-medium">Edit</button></div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {[
                       { l: 'Weight', v: profile?.weight_kg ? `${profile.weight_kg} kg` : '—' },
@@ -650,7 +650,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Progress Timeline</h2>
               <button onClick={() => setShowProgressModal(true)}
-                className="px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-xs font-semibold hover:bg-sky-100">+ Add Photo</button>
+                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">+ Add Photo</button>
             </div>
             <PhotoTimeline entries={timeline} onDelete={handleDeleteProgress} />
           </div>
@@ -665,13 +665,13 @@ export default function ProfilePage() {
             <DateRangePicker range={statsRange} onChange={setStatsRange} />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white border border-sky-200 rounded-xl p-4 text-center"><div className="text-2xl font-black text-sky-500">{profile?.xp_total || 0}</div><div className="text-xs text-sky-400 mt-1">Total XP</div></div>
+            <div className="bg-white border border-red-200 rounded-xl p-4 text-center"><div className="text-2xl font-black text-red-500">{profile?.xp_total || 0}</div><div className="text-xs text-red-400 mt-1">Total XP</div></div>
             <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{workoutCount}</div><div className="text-xs text-muted mt-1">Workouts</div></div>
             <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{profile?.current_streak || 0} 🔥</div><div className="text-xs text-muted mt-1">Streak</div></div>
             <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{achievementCount}</div><div className="text-xs text-muted mt-1">Achievements</div></div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={xpData} label="XP Earned" color="#38bdf8" /></div>
+            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={xpData} label="XP Earned" color="#e10600" /></div>
             <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={workoutData} label="Workouts" color="#34d399" /></div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

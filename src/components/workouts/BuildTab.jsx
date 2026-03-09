@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabaseClient'
 // =============================================
 const MAIN_CATEGORIES = [
   {
-    id: 'upper', label: 'Upper Body', icon: '💪', color: 'from-sky-500 to-blue-600',
+    id: 'upper', label: 'Upper Body', icon: '💪', color: 'from-red-500 to-red-700',
     subs: [
       { id: 'chest', label: 'Chest', muscles: ['chest'] },
       { id: 'shoulders', label: 'Shoulders', muscles: ['shoulders', 'front_delts', 'rear_delts'] },
@@ -18,7 +18,7 @@ const MAIN_CATEGORIES = [
     ]
   },
   {
-    id: 'lower', label: 'Lower Body', icon: '🦵', color: 'from-green-500 to-emerald-600',
+    id: 'lower', label: 'Lower Body', icon: '🦵', color: 'from-green-500 to-red-600',
     subs: [
       { id: 'quads', label: 'Quads', muscles: ['quads'] },
       { id: 'hamstrings', label: 'Hamstrings', muscles: ['hamstrings'] },
@@ -205,7 +205,7 @@ export default function BuildTab() {
             <div className="grid grid-cols-2 gap-3">
               {MAIN_CATEGORIES.map(cat => (
                 <button key={cat.id} onClick={() => { setSelectedMain(cat.id); setView('subcategory') }}
-                  className="bg-white border border-border rounded-2xl p-5 text-left hover:shadow-md hover:border-sky-200 transition-all group">
+                  className="bg-white border border-border rounded-2xl p-5 text-left hover:shadow-md hover:border-red-200 transition-all group">
                   <div className={`w-11 h-11 bg-gradient-to-br ${cat.color} rounded-xl flex items-center justify-center text-xl mb-3 shadow-sm group-hover:scale-105 transition-transform`}>
                     {cat.icon}
                   </div>
@@ -237,16 +237,16 @@ export default function BuildTab() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
               {MAIN_CATEGORIES.find(m => m.id === selectedMain)?.subs.map(sub => (
                 <button key={sub.id} onClick={() => setSelectedSub(sub.id)}
-                  className="bg-white border border-border rounded-xl p-4 text-left hover:shadow-sm hover:border-sky-200 transition-all">
+                  className="bg-white border border-border rounded-xl p-4 text-left hover:shadow-sm hover:border-red-200 transition-all">
                   <div className="text-sm font-bold text-dark">{sub.label}</div>
                   <div className="text-[10px] text-muted mt-1">{countForSub(sub)} exercises</div>
                 </button>
               ))}
               {/* Show All in this main category */}
               <button onClick={() => setSelectedSub('__all__')}
-                className="bg-sky-50 border border-sky-200 rounded-xl p-4 text-left hover:shadow-sm transition-all">
-                <div className="text-sm font-bold text-sky-600">All</div>
-                <div className="text-[10px] text-sky-400 mt-1">Show everything</div>
+                className="bg-red-50 border border-red-200 rounded-xl p-4 text-left hover:shadow-sm transition-all">
+                <div className="text-sm font-bold text-red-600">All</div>
+                <div className="text-[10px] text-red-400 mt-1">Show everything</div>
               </button>
             </div>
           </div>
@@ -263,7 +263,7 @@ export default function BuildTab() {
             {/* Search + Filters */}
             <div className="flex gap-2 mb-4 flex-wrap">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..."
-                className="flex-1 min-w-[180px] bg-white border border-border rounded-lg px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-sky-400" />
+                className="flex-1 min-w-[180px] bg-white border border-border rounded-lg px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-red-400" />
               <div className="flex gap-1">
                 {['all', 'beginner', 'intermediate', 'advanced'].map(d => (
                   <button key={d} onClick={() => setDiffFilter(d)}
@@ -290,13 +290,13 @@ export default function BuildTab() {
 
                 return (
                   <div key={ex.id} onClick={() => toggleSelect(ex.id)}
-                    className={`rounded-xl overflow-hidden transition-all cursor-pointer ${isSel ? 'ring-2 ring-sky-400 bg-sky-50/50 shadow-md' : 'bg-white border border-border hover:border-sky-200 hover:shadow-sm'}`}>
+                    className={`rounded-xl overflow-hidden transition-all cursor-pointer ${isSel ? 'ring-2 ring-sky-400 bg-red-50/50 shadow-md' : 'bg-white border border-border hover:border-red-200 hover:shadow-sm'}`}>
                     {/* 3D Placeholder */}
                     <div className={`h-20 flex items-center justify-center relative ${isSel ? 'bg-gradient-to-br from-sky-50 to-sky-100' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
                       <span className="text-3xl opacity-20">🏋️</span>
                       <span className="absolute bottom-1.5 right-2 text-[8px] text-dim bg-white/80 px-1.5 py-0.5 rounded">3D</span>
                       {isSel && (
-                        <div className="absolute top-2 left-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center shadow-md">
+                        <div className="absolute top-2 left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-md">
                           <span className="text-white text-[10px] font-black">{selIdx + 1}</span>
                         </div>
                       )}
@@ -357,7 +357,7 @@ export default function BuildTab() {
                       <div key={id} className="bg-surface rounded-xl p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white text-[9px] font-black">{idx + 1}</span>
                             </div>
                             <span className="text-[11px] font-semibold text-dark truncate">{ex.name}</span>
@@ -372,25 +372,25 @@ export default function BuildTab() {
                           <div>
                             <div className="text-[8px] text-dim mb-0.5">Sets</div>
                             <input type="number" value={cfg.sets || 3} onChange={e => updateConfig(id, 'sets', parseInt(e.target.value) || 0)}
-                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-sky-400 text-center" />
+                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
                           </div>
                           {ex.tracking_type === 'reps' ? (
                             <div>
                               <div className="text-[8px] text-dim mb-0.5">Reps</div>
                               <input type="number" value={cfg.reps || ''} onChange={e => updateConfig(id, 'reps', parseInt(e.target.value) || 0)}
-                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-sky-400 text-center" />
+                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
                             </div>
                           ) : (
                             <div>
                               <div className="text-[8px] text-dim mb-0.5">Sec</div>
                               <input type="number" value={cfg.time || ''} onChange={e => updateConfig(id, 'time', parseInt(e.target.value) || 0)}
-                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-sky-400 text-center" />
+                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
                             </div>
                           )}
                           <div>
                             <div className="text-[8px] text-dim mb-0.5">Rest</div>
                             <input type="number" value={cfg.rest || 60} onChange={e => updateConfig(id, 'rest', parseInt(e.target.value) || 0)}
-                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-sky-400 text-center" />
+                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
                           </div>
                         </div>
                       </div>
@@ -413,7 +413,7 @@ export default function BuildTab() {
                   <div className="text-center py-2 text-green-500 font-bold text-sm">✓ Saved!</div>
                 ) : (
                   <button onClick={handleSave} disabled={saving || !workoutName.trim()}
-                    className="w-full py-3 bg-dark text-white rounded-xl text-xs font-bold hover:bg-sky-600 disabled:opacity-30 transition-all">
+                    className="w-full py-3 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 disabled:opacity-30 transition-all">
                     {saving ? 'Saving...' : 'Save Workout'}
                   </button>
                 )}
@@ -431,7 +431,7 @@ export default function BuildTab() {
               <span className="text-xs font-bold text-dark whitespace-nowrap">{selected.length} exercises</span>
               {selected.slice(0, 3).map(id => {
                 const ex = exMap[id]
-                return ex ? <span key={id} className="text-[9px] bg-sky-50 text-sky-600 px-2 py-0.5 rounded whitespace-nowrap">{ex.name}</span> : null
+                return ex ? <span key={id} className="text-[9px] bg-red-50 text-red-600 px-2 py-0.5 rounded whitespace-nowrap">{ex.name}</span> : null
               })}
               {selected.length > 3 && <span className="text-[9px] text-dim">+{selected.length - 3}</span>}
             </div>

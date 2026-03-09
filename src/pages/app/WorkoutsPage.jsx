@@ -26,7 +26,7 @@ export default function WorkoutsPage() {
             className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${
               activeTab === tab.id
                 ? 'bg-dark text-white shadow-lg'
-                : 'bg-white border border-border text-muted hover:border-sky-200 hover:text-dark'
+                : 'bg-white border border-border text-muted hover:border-red-200 hover:text-dark'
             }`}>
             <span className="text-base">{tab.icon}</span>
             <span>{tab.label}</span>

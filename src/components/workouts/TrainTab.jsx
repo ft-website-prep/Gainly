@@ -97,7 +97,7 @@ export default function TrainTab({ onStartWorkout }) {
       <div className="bg-white border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-dark flex items-center gap-2">🎲 Random Workout</h3>
-          <button onClick={() => setRandomConfig(!randomConfig)} className="text-[10px] text-sky-500 font-medium">
+          <button onClick={() => setRandomConfig(!randomConfig)} className="text-[10px] text-red-500 font-medium">
             {randomConfig ? 'Hide options' : 'Options'}
           </button>
         </div>
@@ -122,7 +122,7 @@ export default function TrainTab({ onStartWorkout }) {
         )}
 
         <button onClick={handleRandom}
-          className="w-full py-3 bg-gradient-to-r from-sky-500 to-blue-500 text-white rounded-xl text-sm font-bold hover:from-sky-600 hover:to-blue-600 shadow-lg shadow-sky-200 transition-all">
+          className="w-full py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-bold hover:from-sky-600 hover:to-blue-600 shadow-lg shadow-red-200 transition-all">
           🎲 Generate & Start
         </button>
       </div>
@@ -155,7 +155,7 @@ export default function TrainTab({ onStartWorkout }) {
                   <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                     <button onClick={() => handleDelete(w.id)} className="opacity-0 group-hover:opacity-100 text-dim hover:text-red-500 text-xs transition-all p-1">🗑️</button>
                     <button onClick={() => handleStart(w)}
-                      className="py-2.5 px-5 bg-dark text-white rounded-xl text-xs font-bold hover:bg-sky-600 shadow-lg transition-all">
+                      className="py-2.5 px-5 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 shadow-lg transition-all">
                       ▶ Start
                     </button>
                   </div>

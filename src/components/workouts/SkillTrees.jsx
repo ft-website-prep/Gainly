@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 
 const FEATURED_SKILLS = [
   { name: 'Full Planche', icon: '🤸', gradient: 'from-purple-500 to-pink-500' },
-  { name: 'Full Front Lever', icon: '🏋️', gradient: 'from-sky-500 to-blue-500' },
+  { name: 'Full Front Lever', icon: '🏋️', gradient: 'from-red-500 to-red-600' },
   { name: 'Muscle-Up', icon: '💪', gradient: 'from-orange-500 to-red-500' },
   { name: 'Handstand Push-Up', icon: '🤚', gradient: 'from-green-500 to-emerald-500' },
   { name: 'One Arm Push-Up', icon: '🫸', gradient: 'from-amber-500 to-yellow-500' },
@@ -143,13 +143,13 @@ function NodePopup({ exercise, position, onClose }) {
           ? <div className="mb-3"><span className="text-[10px] text-dim">Equipment: </span>{exercise.equipment_required.map(eq => <span key={eq} className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded mr-1">{eq.replace(/_/g, ' ')}</span>)}</div>
           : <div className="text-[10px] text-green-500 font-medium mb-3">No equipment needed</div>}
         {criteria && (
-          <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-sky-600 font-bold">To unlock next</span>
+              <span className="text-[10px] text-red-600 font-bold">To unlock next</span>
               <span className="text-xs font-bold text-sky-700">{criteria.criteria}</span>
             </div>
-            <p className="text-[10px] text-sky-600 leading-relaxed">{criteria.detail}</p>
-            <div className="text-[9px] text-sky-400 mt-1.5">Next: {criteria.next}</div>
+            <p className="text-[10px] text-red-600 leading-relaxed">{criteria.detail}</p>
+            <div className="text-[9px] text-red-400 mt-1.5">Next: {criteria.next}</div>
           </div>
         )}
         {!criteria && exercise.difficulty === 'advanced' && (
@@ -193,7 +193,7 @@ function SkillGraph({ graph }) {
             <g key={node.id} className="cursor-pointer" onClick={(e) => { setSelectedNode(node.exercise); setPopupPos({ x: e.clientX, y: e.clientY }) }}>
               <rect x={cx - NODE_W/2} y={cy - NODE_H/2} width={NODE_W} height={NODE_H} rx="12" ry="12"
                 fill={node.isTarget ? '#eff6ff' : 'white'} stroke={node.isTarget ? '#60a5fa' : diff.border}
-                strokeWidth={node.isTarget ? 2.5 : 1.5} filter="url(#node-shadow)" className="transition-all hover:stroke-sky-400" />
+                strokeWidth={node.isTarget ? 2.5 : 1.5} filter="url(#node-shadow)" className="transition-all hover:stroke-red-400" />
               <circle cx={cx - NODE_W/2 + 14} cy={cy - 7} r="4" fill={diff.dot} />
               <text x={cx - NODE_W/2 + 24} y={cy - 5} className="text-[10px] font-semibold" fill="#1e293b" dominantBaseline="middle">
                 {node.exercise.name.length > 17 ? node.exercise.name.slice(0, 16) + '...' : node.exercise.name}
@@ -246,7 +246,7 @@ export default function SkillTrees() {
           const isSel = selected === skill.name
           return (
             <button key={skill.name} onClick={() => setSelected(isSel ? null : skill.name)}
-              className={`p-4 rounded-xl text-center transition-all ${isSel ? 'bg-white border-2 border-sky-400 shadow-lg shadow-sky-100 scale-[1.02]' : 'bg-white border border-border hover:shadow-md hover:border-sky-200'}`}>
+              className={`p-4 rounded-xl text-center transition-all ${isSel ? 'bg-white border-2 border-red-400 shadow-lg shadow-red-100 scale-[1.02]' : 'bg-white border border-border hover:shadow-md hover:border-red-200'}`}>
               <div className={`w-10 h-10 mx-auto bg-gradient-to-br ${skill.gradient} rounded-xl flex items-center justify-center text-xl shadow-sm mb-2`}>{skill.icon}</div>
               <div className="text-xs font-bold text-dark leading-tight">{skill.name}</div>
               {ex && <div className="flex items-center justify-center mt-1.5"><span className={`text-[9px] px-1.5 py-0.5 rounded ${ex.difficulty === 'beginner' ? 'bg-green-50 text-green-600' : ex.difficulty === 'intermediate' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>{ex.difficulty}</span></div>}
@@ -269,7 +269,7 @@ export default function SkillTrees() {
           <div className="flex items-center justify-center gap-6 mt-3">
             <span className="text-[10px] text-green-500 font-bold">START (easier)</span>
             <span className="text-dim text-xs">---&gt;</span>
-            <span className="text-[10px] text-sky-500 font-bold">GOAL (harder)</span>
+            <span className="text-[10px] text-red-500 font-bold">GOAL (harder)</span>
           </div>
         </div>
       )}

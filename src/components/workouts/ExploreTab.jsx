@@ -42,9 +42,9 @@ export default function ExploreTab() {
       {/* Section Toggle */}
       <div className="flex gap-2 mb-6">
         <button onClick={() => setSection('calisthenics')}
-          className={`flex-1 p-4 rounded-xl text-left transition-all ${section === 'calisthenics' ? 'bg-white border-2 border-sky-400 shadow-lg' : 'bg-white border border-border hover:border-sky-200'}`}>
+          className={`flex-1 p-4 rounded-xl text-left transition-all ${section === 'calisthenics' ? 'bg-white border-2 border-red-400 shadow-lg' : 'bg-white border border-border hover:border-red-200'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center text-lg shadow-sm">🤸</div>
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center text-lg shadow-sm">🤸</div>
             <div>
               <div className="text-sm font-bold text-dark">Calisthenics</div>
               <div className="text-[10px] text-muted">{calisthenicsExercises.length} exercises · Skill Trees · Progressions</div>
@@ -52,7 +52,7 @@ export default function ExploreTab() {
           </div>
         </button>
         <button onClick={() => setSection('gym')}
-          className={`flex-1 p-4 rounded-xl text-left transition-all ${section === 'gym' ? 'bg-white border-2 border-sky-400 shadow-lg' : 'bg-white border border-border hover:border-sky-200'}`}>
+          className={`flex-1 p-4 rounded-xl text-left transition-all ${section === 'gym' ? 'bg-white border-2 border-red-400 shadow-lg' : 'bg-white border border-border hover:border-red-200'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-lg shadow-sm">🏋️</div>
             <div>
@@ -65,7 +65,7 @@ export default function ExploreTab() {
 
       {/* Request Link */}
       <div className="flex justify-end mb-4">
-        <button onClick={() => setShowRequest(true)} className="text-xs text-sky-500 hover:text-sky-600 font-medium">Missing an exercise? →</button>
+        <button onClick={() => setShowRequest(true)} className="text-xs text-red-500 hover:text-red-600 font-medium">Missing an exercise? →</button>
       </div>
 
       {/* ============ CALISTHENICS SECTION ============ */}
@@ -80,7 +80,7 @@ export default function ExploreTab() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {calisthenicsExercises.map(ex => (
                 <div key={ex.id} onClick={() => setExpanded(expanded === ex.id ? null : ex.id)}
-                  className="bg-white border border-border rounded-xl p-3 hover:border-sky-200 transition-all cursor-pointer">
+                  className="bg-white border border-border rounded-xl p-3 hover:border-red-200 transition-all cursor-pointer">
                   <div className="text-xs font-bold text-dark">{ex.name}</div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <div className={`w-1.5 h-1.5 rounded-full ${ex.difficulty === 'beginner' ? 'bg-green-500' : ex.difficulty === 'intermediate' ? 'bg-amber-500' : 'bg-red-500'}`} />
@@ -91,7 +91,7 @@ export default function ExploreTab() {
                   {expanded === ex.id && (
                     <div className="mt-2 pt-2 border-t border-border">
                       {ex.description && <p className="text-[10px] text-muted mb-1">{ex.description}</p>}
-                      {ex.primary_muscles?.length > 0 && <div className="text-[9px] text-sky-600">{ex.primary_muscles.join(', ')}</div>}
+                      {ex.primary_muscles?.length > 0 && <div className="text-[9px] text-red-600">{ex.primary_muscles.join(', ')}</div>}
                       {ex.equipment_required?.length > 0 && <div className="text-[9px] text-amber-600 mt-0.5">🔧 {ex.equipment_required.join(', ').replace(/_/g, ' ')}</div>}
                       {(!ex.equipment_required || ex.equipment_required.length === 0) && <div className="text-[9px] text-green-500 mt-0.5">✓ No equipment</div>}
                     </div>
@@ -142,7 +142,7 @@ export default function ExploreTab() {
                       {expanded === ex.id && (
                         <div className="mt-2 pt-2 border-t border-border">
                           {ex.description && <p className="text-[10px] text-muted mb-1">{ex.description}</p>}
-                          {ex.primary_muscles?.length > 0 && <div className="text-[9px] text-sky-600">{ex.primary_muscles.join(', ')}</div>}
+                          {ex.primary_muscles?.length > 0 && <div className="text-[9px] text-red-600">{ex.primary_muscles.join(', ')}</div>}
                         </div>
                       )}
                     </div>
@@ -167,10 +167,10 @@ export default function ExploreTab() {
                 <div className="text-center py-4"><div className="text-3xl mb-2">✅</div><p className="text-sm text-green-600 font-medium">Request sent!</p></div>
               ) : (
                 <>
-                  <div><label className="block text-sm text-muted mb-1.5">Exercise Name *</label><input type="text" value={reqName} onChange={e => setReqName(e.target.value)} placeholder="e.g. Cable Fly" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400" /></div>
-                  <div><label className="block text-sm text-muted mb-1.5">Category</label><select value={reqCat} onChange={e => setReqCat(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400">{['push', 'pull', 'legs', 'core', 'cardio', 'flexibility'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}</select></div>
-                  <div><label className="block text-sm text-muted mb-1.5">Description</label><textarea value={reqDesc} onChange={e => setReqDesc(e.target.value)} rows={2} placeholder="Optional" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-sky-400 resize-none" /></div>
-                  <button onClick={handleRequest} disabled={!reqName.trim()} className="w-full py-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-sm font-bold disabled:opacity-50">Submit Request</button>
+                  <div><label className="block text-sm text-muted mb-1.5">Exercise Name *</label><input type="text" value={reqName} onChange={e => setReqName(e.target.value)} placeholder="e.g. Cable Fly" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div>
+                  <div><label className="block text-sm text-muted mb-1.5">Category</label><select value={reqCat} onChange={e => setReqCat(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400">{['push', 'pull', 'legs', 'core', 'cardio', 'flexibility'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}</select></div>
+                  <div><label className="block text-sm text-muted mb-1.5">Description</label><textarea value={reqDesc} onChange={e => setReqDesc(e.target.value)} rows={2} placeholder="Optional" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /></div>
+                  <button onClick={handleRequest} disabled={!reqName.trim()} className="w-full py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">Submit Request</button>
                 </>
               )}
             </div>

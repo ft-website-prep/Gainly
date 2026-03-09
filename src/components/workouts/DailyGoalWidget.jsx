@@ -93,14 +93,14 @@ export default function DailyGoalWidget() {
           <div className="text-green-500 text-sm font-bold">✓ Done</div>
         ) : (
           <button onClick={markComplete}
-            className="px-4 py-2 bg-dark text-white rounded-lg text-[11px] font-bold hover:bg-sky-600 transition-all">
+            className="px-4 py-2 bg-dark text-white rounded-lg text-[11px] font-bold hover:bg-red-600 transition-all">
             Complete
           </button>
         )}
       </div>
       {!goal.completed && (
         <div className="mt-3 w-full h-1.5 bg-surface rounded-full overflow-hidden">
-          <div className="h-full bg-sky-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-full bg-red-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>
