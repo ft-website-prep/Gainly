@@ -20,6 +20,8 @@ export default function ExploreTab() {
   const { user } = useAuth()
   const [section, setSection] = useState('calisthenics')
   const [methods, setMethods] = useState([])
+  const [gymExercises, setGymExercises] = useState([])
+  const [gymFilter, setGymFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [expandedMethod, setExpandedMethod] = useState(null)
   const [methodFilter, setMethodFilter] = useState('all')
@@ -32,8 +34,12 @@ export default function ExploreTab() {
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
-    const { data } = await supabase.from('training_methods').select('*').order('name')
+    const [{ data }, { data: gymData }] = await Promise.all([
+      supabase.from('training_methods').select('*').order('name'),
+      supabase.from('exercises').select('*').not('equipment_required', 'eq', '{}').order('name'),
+    ])
     setMethods(data || [])
+    setGymExercises(gymData?.filter(e => e.equipment_required?.length > 0) || [])
     setLoading(false)
   }
 
@@ -54,6 +60,7 @@ export default function ExploreTab() {
       <div className="flex gap-2 mb-6">
         {[
           { id: 'calisthenics', label: 'Skill Trees', icon: '🌳', desc: 'Progressions' },
+          { id: 'gym', label: 'Gym', icon: '🏋️', desc: 'Equipment exercises' },
           { id: 'methods', label: 'Methods', icon: '📖', desc: 'Training protocols' },
         ].map(s => (
           <button key={s.id} onClick={() => setSection(s.id)}
@@ -78,6 +85,70 @@ export default function ExploreTab() {
           <SkillTrees />
         </div>
       )}
+
+      {/* GYM SECTION */}
+      {section === 'gym' && (() => {
+        const gymCategories = ['all', ...Array.from(new Set(gymExercises.map(e => e.category).filter(Boolean)))]
+        const filtered = gymFilter === 'all' ? gymExercises : gymExercises.filter(e => e.category === gymFilter)
+        return (
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-black text-dark">Gym Exercises</h2>
+              <p className="text-xs text-muted mt-0.5">Equipment-based training with 3D demos</p>
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex gap-1.5 mb-5 flex-wrap">
+              {gymCategories.map(c => (
+                <button key={c} onClick={() => setGymFilter(c)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${gymFilter === c ? 'bg-dark text-white' : 'bg-surface text-muted border border-border'}`}>
+                  {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Exercise Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {filtered.map(ex => (
+                <div key={ex.id} className="bg-white border border-border rounded-2xl overflow-hidden">
+                  {/* 3D Demo Area */}
+                  <div className="h-28 bg-surface flex items-center justify-center border-b border-border">
+                    {ex.demo_3d_url ? (
+                      <a href={ex.demo_3d_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors">
+                        ▶ 3D Demo
+                      </a>
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-2xl mb-1 opacity-30">🎬</div>
+                        <span className="text-[10px] text-dim font-medium">3D soon</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className="p-3">
+                    <div className="text-sm font-bold text-dark leading-tight">{ex.name}</div>
+                    {ex.primary_muscles?.length > 0 && (
+                      <div className="text-[10px] text-muted mt-0.5">{ex.primary_muscles.join(', ')}</div>
+                    )}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {ex.equipment_required?.map((eq, i) => (
+                        <span key={i} className="text-[9px] bg-surface border border-border text-dim px-1.5 py-0.5 rounded">{eq}</span>
+                      ))}
+                      {ex.difficulty && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${DIFF_COLORS[ex.difficulty] || DIFF_COLORS.intermediate}`}>{ex.difficulty}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="col-span-2 text-center py-12 text-muted text-sm">No gym exercises found.</div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* TRAINING METHODS */}
       {section === 'methods' && (
@@ -142,61 +213,27 @@ export default function ExploreTab() {
                       <div className="bg-surface rounded-xl p-4">
                         <h4 className="text-xs font-bold text-dark mb-2">How it works</h4>
                         <div className="space-y-1.5">
-                          {method.how_it_works.split(/\d+\.\s/).filter(Boolean).map((step, i) => (
-                            <div key={i} className="flex gap-2 text-sm text-muted">
-                              <span className="text-red-500 font-bold text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
-                              <span>{step.trim()}</span>
-                            </div>
-                          ))}
+                          {method.how_it_works.split(/\d+\.\s/).filter(Boolean).map((step, i) => {
+                            const words = step.trim().split(' ')
+                            const first = words[0]
+                            const rest = words.slice(1).join(' ')
+                            return (
+                              <div key={i} className="flex gap-2 text-sm text-muted">
+                                <span className="text-red-500 font-bold text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+                                <span><strong className="text-dark">{first}</strong>{rest ? ' ' + rest : ''}</span>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
 
-                      {/* Benefits */}
-                      {method.benefits?.length > 0 && (
-                        <div>
-                          <h4 className="text-xs font-bold text-dark mb-2">Benefits</h4>
-                          <div className="flex flex-wrap gap-1.5">
-                            {method.benefits.map((b, i) => (
-                              <span key={i} className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded-lg">{b}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Best For */}
-                      {method.best_for?.length > 0 && (
-                        <div>
-                          <h4 className="text-xs font-bold text-dark mb-2">Best for</h4>
-                          <div className="flex flex-wrap gap-1.5">
-                            {method.best_for.map((b, i) => (
-                              <span key={i} className="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded-lg">{b}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Default Exercises */}
+                      {/* Recommended Exercises */}
                       {method.default_exercises?.length > 0 && (
                         <div>
                           <h4 className="text-xs font-bold text-dark mb-2">Recommended exercises</h4>
                           <div className="flex flex-wrap gap-1.5">
                             {method.default_exercises.map((e, i) => (
                               <span key={i} className="text-[10px] bg-surface text-dark px-2.5 py-1 rounded-lg border border-border font-medium">{e}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Parameters */}
-                      {method.parameters && Object.keys(method.parameters).length > 0 && (
-                        <div className="bg-surface rounded-xl p-4">
-                          <h4 className="text-xs font-bold text-dark mb-2">Default parameters</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {Object.entries(method.parameters).map(([key, val]) => (
-                              <div key={key} className="text-center">
-                                <div className="text-lg font-black text-dark">{Array.isArray(val) ? val.join(',') : val}</div>
-                                <div className="text-[9px] text-dim">{key.replace(/_/g, ' ')}</div>
-                              </div>
                             ))}
                           </div>
                         </div>
