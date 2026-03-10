@@ -16,9 +16,9 @@ const DIFF_COLORS = {
   advanced: 'bg-red-50 text-red-600',
 }
 
-export default function ExploreTab() {
+export default function ExploreTab({ initialSection }) {
   const { user } = useAuth()
-  const [section, setSection] = useState('calisthenics')
+  const [section, setSection] = useState(initialSection || 'calisthenics')
   const [methods, setMethods] = useState([])
   const [gymExercises, setGymExercises] = useState([])
   const [gymFilter, setGymFilter] = useState('all')

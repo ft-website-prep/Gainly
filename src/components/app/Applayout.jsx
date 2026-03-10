@@ -5,11 +5,12 @@ import { supabase } from '../../lib/supabaseClient'
 import DailyGoalPopup from '../workouts/DailyGoalPopup'
 
 const NAV_ITEMS = [
-  { path: '/app',           label: 'Dashboard',  icon: '🏠', end: true },
-  { path: '/app/workouts',  label: 'Workouts',   icon: '💪' },
-  { path: '/app/community', label: 'Community',  icon: '👥' },
-  { path: '/app/coach',     label: 'AI Coach',   icon: '🤖' },
-  { path: '/app/profile',   label: 'Profile',    icon: '👤' },
+  { path: '/app',                label: 'Dashboard',    icon: '🏠', end: true },
+  { path: '/app/workouts',       label: 'Workouts',     icon: '💪' },
+  { path: '/app/leaderboards',   label: 'Leaderboards', icon: '🏆' },
+  { path: '/app/community',      label: 'Community',    icon: '👥' },
+  { path: '/app/coach',          label: 'AI Coach',     icon: '🤖' },
+  { path: '/app/profile',        label: 'Profile',      icon: '👤' },
 ]
 
 export default function AppLayout() {

@@ -2,36 +2,17 @@ import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 
-const MAIN_CATEGORIES = [
-  { id: 'upper', label: 'Upper Body', icon: '\uD83D\uDCAA', color: 'from-red-500 to-red-600',
-    subs: [
-      { id: 'chest', label: 'Chest', muscles: ['chest'] },
-      { id: 'shoulders', label: 'Shoulders', muscles: ['shoulders', 'front_delts', 'rear_delts'] },
-      { id: 'triceps', label: 'Triceps', muscles: ['triceps'] },
-      { id: 'biceps', label: 'Biceps', muscles: ['biceps'] },
-      { id: 'back', label: 'Back', muscles: ['lats', 'rhomboids', 'traps', 'upper_back'] },
-      { id: 'forearms', label: 'Forearms', muscles: ['forearms'] },
-    ]},
-  { id: 'lower', label: 'Lower Body', icon: '\uD83E\uDDB5', color: 'from-green-500 to-emerald-600',
-    subs: [
-      { id: 'quads', label: 'Quads', muscles: ['quads'] },
-      { id: 'hamstrings', label: 'Hamstrings', muscles: ['hamstrings'] },
-      { id: 'glutes', label: 'Glutes', muscles: ['glutes'] },
-      { id: 'calves', label: 'Calves', muscles: ['calves'] },
-      { id: 'hip_flexors', label: 'Hip Flexors', muscles: ['hip_flexors', 'adductors'] },
-    ]},
-  { id: 'core', label: 'Core', icon: '\uD83D\uDC8E', color: 'from-amber-500 to-orange-500',
-    subs: [
-      { id: 'abs', label: 'Abs', muscles: ['core', 'abs'] },
-      { id: 'obliques', label: 'Obliques', muscles: ['obliques'] },
-      { id: 'lower_back', label: 'Lower Back', muscles: ['lower_back'] },
-    ]},
-  { id: 'cardio', label: 'Cardio & Flex', icon: '\u2764\uFE0F', color: 'from-red-400 to-pink-500',
-    subs: [
-      { id: 'cardio', label: 'Cardio', muscles: [] },
-      { id: 'flexibility', label: 'Flexibility', muscles: [] },
-    ]},
-]
+const CATEGORIES = ['all', 'push', 'pull', 'legs', 'core', 'cardio', 'flexibility']
+
+const CAT_ICONS = {
+  all: '✦', push: '⬆️', pull: '⬇️', legs: '🦵', core: '💎', cardio: '❤️', flexibility: '🌀',
+}
+
+const DIFF_COLORS = {
+  beginner:     { dot: 'bg-green-500', badge: 'bg-green-50 text-green-600' },
+  intermediate: { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-600' },
+  advanced:     { dot: 'bg-red-500',   badge: 'bg-red-50 text-red-600' },
+}
 
 export default function BuildTab() {
   const { user } = useAuth()
@@ -40,12 +21,12 @@ export default function BuildTab() {
   const [methods, setMethods] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [view, setView] = useState('categories')
-  const [selectedMain, setSelectedMain] = useState(null)
-  const [selectedSub, setSelectedSub] = useState(null)
+  // Filters
+  const [source, setSource] = useState('cali')      // 'cali' | 'gym' | 'mix'
+  const [catFilter, setCatFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [diffFilter, setDiffFilter] = useState('all')
 
+  // Builder
   const [selected, setSelected] = useState([])
   const [selectedMethod, setSelectedMethod] = useState(null)
   const [workoutName, setWorkoutName] = useState('')
@@ -69,32 +50,19 @@ export default function BuildTab() {
 
   const filtered = useMemo(() => {
     let result = exercises
-    if (selectedSub && selectedSub !== '__all__') {
-      const sub = MAIN_CATEGORIES.flatMap(m => m.subs).find(s => s.id === selectedSub)
-      if (sub) {
-        if (sub.id === 'cardio') result = result.filter(e => e.category === 'cardio')
-        else if (sub.id === 'flexibility') result = result.filter(e => e.category === 'flexibility')
-        else result = result.filter(e => e.primary_muscles?.some(m => sub.muscles.includes(m)))
-      }
-    } else if (selectedMain && selectedSub === '__all__') {
-      const main = MAIN_CATEGORIES.find(m => m.id === selectedMain)
-      if (main) {
-        const allMuscles = main.subs.flatMap(s => s.muscles)
-        if (selectedMain === 'cardio') result = result.filter(e => e.category === 'cardio' || e.category === 'flexibility')
-        else result = result.filter(e => e.primary_muscles?.some(m => allMuscles.includes(m)))
-      }
-    }
-    if (diffFilter !== 'all') result = result.filter(e => e.difficulty === diffFilter)
+    if (source === 'cali') result = result.filter(e => !e.equipment_required?.length)
+    if (source === 'gym')  result = result.filter(e => e.equipment_required?.length > 0)
+    if (catFilter !== 'all') result = result.filter(e => e.category === catFilter)
     if (search) result = result.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
     return result
-  }, [exercises, selectedMain, selectedSub, diffFilter, search])
+  }, [exercises, source, catFilter, search])
 
   const toggleSelect = (id) => {
     setSelected(prev => {
       if (prev.includes(id)) return prev.filter(i => i !== id)
       const ex = exMap[id]
       if (ex && !configs[id]) {
-        setConfigs(c => ({ ...c, [id]: { sets: 3, reps: ex.tracking_type === 'reps' ? 10 : null, time: ex.tracking_type === 'time' ? 30 : null, rest: 60 }}))
+        setConfigs(c => ({ ...c, [id]: { sets: 3, reps: ex.tracking_type === 'reps' ? 10 : null, time: ex.tracking_type === 'time' ? 30 : null, rest: 60 } }))
       }
       return [...prev, id]
     })
@@ -116,7 +84,7 @@ export default function BuildTab() {
     const { data: w } = await supabase.from('workouts').insert({
       name: workoutName, created_by: user.id, difficulty: 'intermediate',
       estimated_duration: selected.length * 5,
-      tags: selectedMethod ? [selectedMethod.slug] : [],
+      tags: selectedMethod ? [selectedMethod.slug || selectedMethod.name] : [],
     }).select().single()
     if (w) {
       const rows = selected.map((id, i) => {
@@ -129,136 +97,88 @@ export default function BuildTab() {
     setTimeout(() => { setWorkoutName(''); setSelected([]); setConfigs({}); setSelectedMethod(null); setSaved(false) }, 2000)
   }
 
-  const countForSub = (sub) => {
-    if (sub.id === 'cardio') return exercises.filter(e => e.category === 'cardio').length
-    if (sub.id === 'flexibility') return exercises.filter(e => e.category === 'flexibility').length
-    return exercises.filter(e => e.primary_muscles?.some(m => sub.muscles.includes(m))).length
-  }
-
   if (loading) return <div className="text-center py-12 text-muted">Loading...</div>
+
+  const sourceConfig = {
+    cali: { label: 'Calisthenics', icon: '🤸', desc: 'Bodyweight only', color: 'from-green-500 to-emerald-600' },
+    gym:  { label: 'Gym',          icon: '🏋️', desc: 'Equipment-based', color: 'from-red-500 to-red-600' },
+    mix:  { label: 'Mix',          icon: '🔀', desc: 'All exercises',   color: 'from-violet-500 to-purple-600' },
+  }
 
   return (
     <div className="flex gap-6">
       {/* LEFT: Exercise Browser */}
       <div className="flex-1 min-w-0">
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => { setView('categories'); setSelectedMain(null); setSelectedSub(null); setSearch(''); setDiffFilter('all') }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${view !== 'list' ? 'bg-dark text-white' : 'bg-white border border-border text-muted'}`}>
-            By Category
-          </button>
-          <button onClick={() => { setView('list'); setSelectedMain(null); setSelectedSub(null) }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${view === 'list' ? 'bg-dark text-white' : 'bg-white border border-border text-muted'}`}>
-            All Exercises
-          </button>
+
+        {/* Source Toggle */}
+        <div className="flex gap-2 mb-5">
+          {Object.entries(sourceConfig).map(([key, cfg]) => (
+            <button key={key} onClick={() => { setSource(key); setCatFilter('all'); setSearch('') }}
+              className={`flex-1 p-3.5 rounded-xl text-left transition-all ${source === key ? `bg-gradient-to-br ${cfg.color} text-white shadow-lg` : 'bg-white border border-border text-muted hover:border-red-200 hover:shadow-sm'}`}>
+              <div className="text-xl mb-1">{cfg.icon}</div>
+              <div className={`text-xs font-bold ${source === key ? 'text-white' : 'text-dark'}`}>{cfg.label}</div>
+              <div className={`text-[9px] mt-0.5 ${source === key ? 'text-white/70' : 'text-dim'}`}>{cfg.desc}</div>
+            </button>
+          ))}
         </div>
 
-        {/* Categories */}
-        {view === 'categories' && !selectedMain && (
-          <div>
-            <h2 className="text-lg font-black text-dark mb-4">Choose a muscle group</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {MAIN_CATEGORIES.map(cat => (
-                <button key={cat.id} onClick={() => { setSelectedMain(cat.id); setView('subcategory') }}
-                  className="bg-white border border-border rounded-2xl p-5 text-left hover:shadow-md hover:border-red-200 transition-all group">
-                  <div className={`w-11 h-11 bg-gradient-to-br ${cat.color} rounded-xl flex items-center justify-center text-xl mb-3 shadow-sm group-hover:scale-105 transition-transform`}>{cat.icon}</div>
-                  <div className="text-sm font-bold text-dark">{cat.label}</div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {cat.subs.map(s => <span key={s.id} className="text-[9px] bg-surface text-dim px-1.5 py-0.5 rounded">{s.label}</span>)}
-                  </div>
-                </button>
-              ))}
-            </div>
-            {/* Quick search */}
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Or search all exercises..."
-              className="w-full mt-4 bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
-            {search && <ExGrid exercises={filtered} selected={selected} toggleSelect={toggleSelect} links={links} exMap={exMap} />}
-          </div>
-        )}
-
-        {/* Subcategories */}
-        {view === 'subcategory' && selectedMain && !selectedSub && (
-          <div>
-            <button onClick={() => { setSelectedMain(null); setView('categories') }} className="text-muted hover:text-dark text-xs font-medium mb-3">&larr; Back</button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 bg-gradient-to-br ${MAIN_CATEGORIES.find(m => m.id === selectedMain)?.color} rounded-xl flex items-center justify-center text-lg shadow-sm`}>{MAIN_CATEGORIES.find(m => m.id === selectedMain)?.icon}</div>
-              <h2 className="text-lg font-black text-dark">{MAIN_CATEGORIES.find(m => m.id === selectedMain)?.label}</h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-              {MAIN_CATEGORIES.find(m => m.id === selectedMain)?.subs.map(sub => (
-                <button key={sub.id} onClick={() => setSelectedSub(sub.id)}
-                  className="bg-white border border-border rounded-xl p-4 text-left hover:shadow-sm hover:border-red-200 transition-all">
-                  <div className="text-sm font-bold text-dark">{sub.label}</div>
-                  <div className="text-[10px] text-muted mt-1">{countForSub(sub)} exercises</div>
-                </button>
-              ))}
-              <button onClick={() => setSelectedSub('__all__')}
-                className="bg-red-50 border border-red-200 rounded-xl p-4 text-left hover:shadow-sm transition-all">
-                <div className="text-sm font-bold text-red-600">All</div>
-                <div className="text-[10px] text-red-400 mt-1">Show everything</div>
+        {/* Search + Category Filter */}
+        <div className="mb-4 space-y-2.5">
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..."
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
+          <div className="flex gap-1.5 flex-wrap">
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCatFilter(c)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${catFilter === c ? 'bg-dark text-white' : 'bg-white border border-border text-muted hover:border-red-200'}`}>
+                <span>{CAT_ICONS[c]}</span>
+                {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
               </button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Exercise List */}
-        {(selectedSub || view === 'list') && (
-          <div>
-            {selectedSub && <button onClick={() => { setSelectedSub(null); setSearch(''); setDiffFilter('all') }} className="text-muted hover:text-dark text-xs font-medium mb-3">&larr; Back</button>}
-            <div className="flex gap-2 mb-4 flex-wrap">
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..."
-                className="flex-1 min-w-[180px] bg-white border border-border rounded-lg px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-red-400" />
-              <div className="flex gap-1">
-                {['all', 'beginner', 'intermediate', 'advanced'].map(d => (
-                  <button key={d} onClick={() => setDiffFilter(d)}
-                    className={`px-2.5 py-2 rounded-lg text-[10px] font-semibold transition-all ${diffFilter === d
-                      ? d === 'beginner' ? 'bg-green-100 text-green-600' : d === 'intermediate' ? 'bg-amber-100 text-amber-600' : d === 'advanced' ? 'bg-red-100 text-red-600' : 'bg-dark text-white'
-                      : 'bg-surface text-muted hover:bg-white'}`}>
-                    {d === 'all' ? 'All' : d.charAt(0).toUpperCase() + d.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ExGrid exercises={filtered} selected={selected} toggleSelect={toggleSelect} links={links} exMap={exMap} />
-          </div>
-        )}
+        {/* Exercise Grid */}
+        <ExGrid exercises={filtered} selected={selected} toggleSelect={toggleSelect} links={links} />
       </div>
 
-      {/* RIGHT: Workout Builder Sidebar */}
+      {/* RIGHT: Workout Builder */}
       <div className="w-72 flex-shrink-0 hidden lg:block">
         <div className="sticky top-4">
           <div className="bg-white border border-border rounded-2xl overflow-hidden">
-            <div className="bg-dark text-white p-4">
-              <div className="text-[10px] text-white/50 mb-1.5">New Workout</div>
-              <input type="text" value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Workout name..."
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 focus:outline-none focus:border-white/40" />
+            {/* Header */}
+            <div className="bg-dark p-4">
+              <div className="text-[10px] text-white/50 mb-1.5 font-semibold tracking-wider">NEW WORKOUT</div>
+              <input type="text" value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Name your workout..."
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/50" />
             </div>
 
             {/* Method Picker */}
             <div className="p-3 border-b border-border">
               {selectedMethod ? (
-                <div className="flex items-center justify-between bg-red-50 rounded-lg p-2.5">
+                <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-xl p-3">
                   <div>
-                    <div className="text-[10px] text-red-500 font-bold">Method:</div>
-                    <div className="text-xs font-semibold text-dark">{selectedMethod.name}</div>
+                    <div className="text-[9px] text-red-400 font-bold tracking-wider">METHOD</div>
+                    <div className="text-xs font-bold text-dark mt-0.5">{selectedMethod.name}</div>
                   </div>
-                  <button onClick={() => setSelectedMethod(null)} className="text-dim hover:text-red-500 text-xs">&times;</button>
+                  <button onClick={() => setSelectedMethod(null)} className="text-dim hover:text-red-500 text-sm w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-100">&times;</button>
                 </div>
               ) : (
                 <button onClick={() => setShowMethodPicker(true)}
-                  className="w-full py-2 border border-dashed border-border rounded-lg text-[10px] text-muted hover:border-red-300 hover:text-red-500">
-                  + Add training method (optional)
+                  className="w-full py-2.5 border border-dashed border-border rounded-xl text-[10px] text-muted hover:border-red-300 hover:text-red-500 hover:bg-red-50/30 transition-all flex items-center justify-center gap-1.5">
+                  <span className="text-sm">📖</span> Add training method (optional)
                 </button>
               )}
             </div>
 
-            <div className="p-3 max-h-[400px] overflow-y-auto">
+            {/* Selected Exercises */}
+            <div className="p-3 max-h-[380px] overflow-y-auto">
               {selected.length > 0 ? (
                 <div className="space-y-2">
                   {selected.map((id, idx) => {
                     const ex = exMap[id]; if (!ex) return null
                     const cfg = configs[id] || {}
                     return (
-                      <div key={id} className="bg-surface rounded-xl p-3">
+                      <div key={id} className="bg-surface rounded-xl p-3 border border-border/50">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -273,35 +193,53 @@ export default function BuildTab() {
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-1.5">
-                          <div><div className="text-[8px] text-dim mb-0.5">Sets</div><input type="number" value={cfg.sets || 3} onChange={e => updateConfig(id, 'sets', parseInt(e.target.value) || 0)} className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" /></div>
+                          <div>
+                            <div className="text-[8px] text-dim mb-0.5">Sets</div>
+                            <input type="number" value={cfg.sets || 3} onChange={e => updateConfig(id, 'sets', parseInt(e.target.value) || 0)}
+                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
+                          </div>
                           {ex.tracking_type === 'reps' ? (
-                            <div><div className="text-[8px] text-dim mb-0.5">Reps</div><input type="number" value={cfg.reps || ''} onChange={e => updateConfig(id, 'reps', parseInt(e.target.value) || 0)} className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" /></div>
+                            <div>
+                              <div className="text-[8px] text-dim mb-0.5">Reps</div>
+                              <input type="number" value={cfg.reps || ''} onChange={e => updateConfig(id, 'reps', parseInt(e.target.value) || 0)}
+                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
+                            </div>
                           ) : (
-                            <div><div className="text-[8px] text-dim mb-0.5">Sec</div><input type="number" value={cfg.time || ''} onChange={e => updateConfig(id, 'time', parseInt(e.target.value) || 0)} className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" /></div>
+                            <div>
+                              <div className="text-[8px] text-dim mb-0.5">Sec</div>
+                              <input type="number" value={cfg.time || ''} onChange={e => updateConfig(id, 'time', parseInt(e.target.value) || 0)}
+                                className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
+                            </div>
                           )}
-                          <div><div className="text-[8px] text-dim mb-0.5">Rest</div><input type="number" value={cfg.rest || 60} onChange={e => updateConfig(id, 'rest', parseInt(e.target.value) || 0)} className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" /></div>
+                          <div>
+                            <div className="text-[8px] text-dim mb-0.5">Rest</div>
+                            <input type="number" value={cfg.rest || 60} onChange={e => updateConfig(id, 'rest', parseInt(e.target.value) || 0)}
+                              className="w-full bg-white border border-border rounded px-2 py-1 text-[10px] text-dark focus:outline-none focus:border-red-400 text-center" />
+                          </div>
                         </div>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <div className="text-2xl mb-2">&#128455;</div>
-                  <p className="text-[11px] text-muted">Click exercises to select them</p>
+                <div className="text-center py-8 space-y-1">
+                  <div className="text-3xl opacity-30">+</div>
+                  <p className="text-[11px] text-muted">Tap exercises to add them</p>
+                  <p className="text-[10px] text-dim">{filtered.length} available</p>
                 </div>
               )}
             </div>
 
+            {/* Save */}
             {selected.length > 0 && (
               <div className="p-3 border-t border-border">
-                <div className="text-[10px] text-dim mb-2 text-center">{selected.length} exercises &middot; ~{selected.length * 5} min</div>
+                <div className="text-[10px] text-dim mb-2.5 text-center">{selected.length} exercises · ~{selected.length * 5} min</div>
                 {saved ? (
-                  <div className="text-center py-2 text-green-500 font-bold text-sm">&check; Saved!</div>
+                  <div className="text-center py-2.5 text-green-500 font-bold text-sm">✓ Saved!</div>
                 ) : (
                   <button onClick={handleSave} disabled={saving || !workoutName.trim()}
                     className="w-full py-3 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 disabled:opacity-30 transition-all">
-                    {saving ? 'Saving...' : 'Save Workout'}
+                    {saving ? 'Saving...' : '✓ Save Workout'}
                   </button>
                 )}
               </div>
@@ -315,18 +253,21 @@ export default function BuildTab() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowMethodPicker(false)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-border">
-              <h2 className="text-base font-bold text-dark">Choose a Method</h2>
-              <button onClick={() => setShowMethodPicker(false)} className="text-muted hover:text-dark text-xl">&times;</button>
+              <h2 className="text-base font-bold text-dark">Choose a Training Method</h2>
+              <button onClick={() => setShowMethodPicker(false)} className="text-muted hover:text-dark text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface">&times;</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {methods.map(m => (
                 <button key={m.id} onClick={() => { setSelectedMethod(m); setShowMethodPicker(false) }}
-                  className="w-full text-left p-3 rounded-xl border border-border hover:border-red-200 hover:bg-red-50/30 transition-all">
-                  <div className="text-sm font-bold text-dark">{m.name}</div>
-                  <div className="text-[10px] text-muted mt-0.5">{m.short_description}</div>
-                  <div className="flex gap-1.5 mt-1.5">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${m.difficulty === 'beginner' ? 'bg-green-50 text-green-600' : m.difficulty === 'intermediate' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>{m.difficulty}</span>
-                    <span className="text-[9px] text-dim">{m.duration_min}-{m.duration_max} min</span>
+                  className="w-full text-left p-4 rounded-xl border border-border hover:border-red-300 hover:bg-red-50/20 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center text-base font-black text-red-500 flex-shrink-0">
+                      {m.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-dark">{m.name}</div>
+                      <div className="text-[10px] text-muted mt-0.5">{m.short_description}</div>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -338,10 +279,13 @@ export default function BuildTab() {
       {/* Mobile Bottom Tray */}
       {selected.length > 0 && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border p-3 z-40 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-dark">{selected.length} exercises</span>
+          <div className="flex items-center gap-3">
+            <input type="text" value={workoutName} onChange={e => setWorkoutName(e.target.value)} placeholder="Workout name..."
+              className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-dark focus:outline-none focus:border-red-400" />
             <button onClick={handleSave} disabled={saving || !workoutName.trim()}
-              className="py-2.5 px-5 bg-dark text-white rounded-xl text-xs font-bold flex-shrink-0">Save</button>
+              className="py-2.5 px-5 bg-dark text-white rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-30">
+              Save
+            </button>
           </div>
         </div>
       )}
@@ -349,8 +293,7 @@ export default function BuildTab() {
   )
 }
 
-// Exercise Grid Sub-Component
-function ExGrid({ exercises, selected, toggleSelect, links, exMap }) {
+function ExGrid({ exercises, selected, toggleSelect, links }) {
   return (
     <div>
       <div className="text-[10px] text-dim mb-3">{exercises.length} exercises</div>
@@ -359,31 +302,45 @@ function ExGrid({ exercises, selected, toggleSelect, links, exMap }) {
           const isSel = selected.includes(ex.id)
           const selIdx = selected.indexOf(ex.id)
           const hasTree = links.some(l => l.exercise_id === ex.id)
+          const diff = DIFF_COLORS[ex.difficulty] || DIFF_COLORS.intermediate
+          const isGym = ex.equipment_required?.length > 0
           return (
             <div key={ex.id} onClick={() => toggleSelect(ex.id)}
-              className={`rounded-xl overflow-hidden transition-all cursor-pointer ${isSel ? 'ring-2 ring-red-400 bg-red-50/50 shadow-md' : 'bg-white border border-border hover:border-red-200 hover:shadow-sm'}`}>
-              <div className={`h-20 flex items-center justify-center relative ${isSel ? 'bg-gradient-to-br from-red-50 to-red-100' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
-                <span className="text-3xl opacity-20">&#127947;</span>
-                <span className="absolute bottom-1.5 right-2 text-[8px] text-dim bg-white/80 px-1.5 py-0.5 rounded">3D</span>
-                {isSel && <div className="absolute top-2 left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-md"><span className="text-white text-[10px] font-black">{selIdx + 1}</span></div>}
+              className={`rounded-2xl overflow-hidden transition-all cursor-pointer group ${isSel ? 'ring-2 ring-red-400 shadow-lg shadow-red-100' : 'bg-white border border-border hover:border-red-200 hover:shadow-md'}`}>
+              {/* Visual top */}
+              <div className={`h-20 flex items-center justify-center relative ${isSel ? 'bg-gradient-to-br from-red-50 to-red-100' : 'bg-gradient-to-br from-surface to-white'}`}>
+                <span className={`text-4xl transition-transform ${isSel ? 'scale-110' : 'group-hover:scale-105 opacity-20'}`}>
+                  {isGym ? '🏋️' : '🤸'}
+                </span>
+                {isSel && (
+                  <div className="absolute top-2 left-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-md">
+                    <span className="text-white text-[10px] font-black">{selIdx + 1}</span>
+                  </div>
+                )}
+                {hasTree && (
+                  <span className="absolute top-2 right-2 text-[8px] bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full font-bold">🌳</span>
+                )}
               </div>
-              <div className="p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-xs font-bold text-dark truncate">{ex.name}</span>
-                  {hasTree && <span className="text-[8px] bg-purple-50 text-purple-500 px-1 py-0.5 rounded flex-shrink-0">&#127795;</span>}
+              {/* Info */}
+              <div className={`p-3 ${isSel ? 'bg-red-50/40' : ''}`}>
+                <div className="text-xs font-bold text-dark leading-tight mb-1.5">{ex.name}</div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-semibold ${diff.badge}`}>{ex.difficulty}</span>
+                  {isGym
+                    ? <span className="text-[8px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full">🔧 {ex.equipment_required[0]?.replace(/_/g, ' ')}</span>
+                    : <span className="text-[8px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full">✓ Bodyweight</span>
+                  }
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${ex.difficulty === 'beginner' ? 'bg-green-500' : ex.difficulty === 'intermediate' ? 'bg-amber-500' : 'bg-red-500'}`} />
-                  <span className="text-[9px] text-dim">{ex.difficulty}</span>
-                </div>
-                <div className="text-[9px] text-dim mt-1">{ex.primary_muscles?.join(', ')}</div>
-                {ex.equipment_required?.length > 0
-                  ? <div className="text-[9px] text-amber-600 mt-1">&#128295; {ex.equipment_required.map(e => e.replace(/_/g, ' ')).join(', ')}</div>
-                  : <div className="text-[9px] text-green-500 mt-1">&check; Bodyweight</div>}
               </div>
             </div>
           )
         })}
+        {exercises.length === 0 && (
+          <div className="col-span-2 text-center py-12 text-muted text-sm">
+            <div className="text-3xl mb-2">🔍</div>
+            No exercises found
+          </div>
+        )}
       </div>
     </div>
   )

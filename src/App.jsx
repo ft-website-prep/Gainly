@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import CustomCursor from './components/app/CustomCursor'
 
 // Öffentliche Seiten
 import LandingPage from './pages/LandingPage'
@@ -19,12 +20,14 @@ import ProgressPage from './pages/app/ProgressPage'
 import CoachPage from './pages/app/CoachPage'
 import ProfilePage from './pages/app/ProfilePage'
 import SettingsPage from './pages/app/SettingsPage'
+import LeaderboardsPage from './pages/app/LeaderboardsPage'
 
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <CustomCursor />
         <Routes>
           {/* === Öffentliche Routen === */}
           <Route path="/" element={<LandingPage />} />
@@ -58,6 +61,7 @@ function App() {
             <Route path="coach" element={<CoachPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="leaderboards" element={<LeaderboardsPage />} />
           </Route>
 
           {/* Fallback */}
