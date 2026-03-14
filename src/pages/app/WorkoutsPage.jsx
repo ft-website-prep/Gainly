@@ -14,13 +14,15 @@ export default function WorkoutsPage() {
   const [activeTab, setActiveTab] = useState('train')
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [exploreSection, setExploreSection] = useState(null)
+  const [exploreMethodId, setExploreMethodId] = useState(null)
 
   if (activeWorkout) {
     return <ActiveWorkout workout={activeWorkout} onFinish={() => setActiveWorkout(null)} />
   }
 
-  const goToExplore = (section = null) => {
+  const goToExplore = (section = null, methodId = null) => {
     setExploreSection(section)
+    setExploreMethodId(methodId)
     setActiveTab('explore')
   }
 
@@ -42,7 +44,13 @@ export default function WorkoutsPage() {
 
       {activeTab === 'train'   && <TrainTab onStartWorkout={setActiveWorkout} onGoToExplore={goToExplore} />}
       {activeTab === 'build'   && <BuildTab />}
-      {activeTab === 'explore' && <ExploreTab initialSection={exploreSection} />}
+      {activeTab === 'explore' && (
+        <ExploreTab
+          key={`${exploreSection}-${exploreMethodId}`}
+          initialSection={exploreSection}
+          initialMethodId={exploreMethodId}
+        />
+      )}
     </div>
   )
 }

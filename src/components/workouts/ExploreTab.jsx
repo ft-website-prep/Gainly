@@ -20,55 +20,35 @@ const GYM_CAT_ICONS = {
   push: '💪', pull: '🔽', legs: '🦵', core: '🔥', cardio: '❤️', flexibility: '🌀',
 }
 
-const CHALLENGES = [
-  {
-    id: 'c1', icon: '🔥', title: '30-Day Push-Up Challenge', category: 'Strength', difficulty: 'beginner',
-    duration: '30 days', desc: 'Build your push foundation. Start at 10 reps and reach 100 consecutive push-ups by day 30.',
-    weeks: ['Week 1: 10–25 reps/day', 'Week 2: 25–50 reps/day', 'Week 3: 50–75 reps/day', 'Week 4: 75–100 reps/day'],
-    badge: '💪', reward: '+500 XP',
-  },
-  {
-    id: 'c2', icon: '🏆', title: '100 Pull-Ups Challenge', category: 'Strength', difficulty: 'intermediate',
-    duration: '4 weeks', desc: 'Complete 100 total pull-ups across multiple sets per day for 4 weeks. Track your PR.',
-    weeks: ['Week 1: 5 sets × 5 reps daily', 'Week 2: 5 sets × 8 reps daily', 'Week 3: 6 sets × 8 reps daily', 'Week 4: Max effort — hit 100 reps/day'],
-    badge: '🔝', reward: '+800 XP',
-  },
-  {
-    id: 'c3', icon: '🌳', title: 'Handstand 30-Day Program', category: 'Skill', difficulty: 'intermediate',
-    duration: '30 days', desc: 'Go from wall handstand to a 10-second freestanding hold. Daily practice of 15–20 minutes.',
-    weeks: ['Week 1: Wall holds + shoulder prep', 'Week 2: Kick-up practice', 'Week 3: Balance drills', 'Week 4: Freestanding attempts'],
-    badge: '🤸', reward: '+1000 XP',
-  },
-  {
-    id: 'c4', icon: '⚡', title: '7-Day Streak Blitz', category: 'Endurance', difficulty: 'beginner',
-    duration: '7 days', desc: 'Train every single day for 7 days straight. Any workout counts — just keep the streak alive.',
-    weeks: ['Day 1–3: Full body sessions', 'Day 4–5: Upper focus', 'Day 6: Core & mobility', 'Day 7: Personal PR attempt'],
-    badge: '🔥', reward: '+300 XP',
-  },
-  {
-    id: 'c5', icon: '💎', title: 'Muscle-Up Mastery', category: 'Skill', difficulty: 'advanced',
-    duration: '8 weeks', desc: 'Unlock your first strict muscle-up. Requires solid pull-up base (8+ reps). Progressive skill work.',
-    weeks: ['Week 1–2: High pull-up negatives', 'Week 3–4: Transition drills', 'Week 5–6: Banded muscle-ups', 'Week 7–8: Full muscle-up attempts'],
-    badge: '🏅', reward: '+1500 XP',
-  },
-  {
-    id: 'c6', icon: '🦵', title: 'Pistol Squat Progression', category: 'Strength', difficulty: 'intermediate',
-    duration: '6 weeks', desc: 'Develop the single-leg squat from scratch. Balance, strength, and mobility all in one.',
-    weeks: ['Week 1–2: Assisted pistol squats', 'Week 3–4: Box pistols', 'Week 5: Partial pistols', 'Week 6: Full pistol squats'],
-    badge: '🦵', reward: '+700 XP',
-  },
-]
-
-const CHALLENGE_DIFF_COLORS = {
-  beginner: 'bg-green-50 text-green-600 border-green-200',
-  intermediate: 'bg-amber-50 text-amber-600 border-amber-200',
-  advanced: 'bg-red-50 text-red-600 border-red-200',
+const CHALLENGE_CAT_EMOJIS = {
+  strength: '💪', endurance: '❤️', skill: '🌳', hybrid: '⚡',
 }
 
-const CHALLENGE_CAT_COLORS = {
-  Strength: 'bg-red-50 text-red-600',
-  Skill: 'bg-purple-50 text-purple-600',
-  Endurance: 'bg-amber-50 text-amber-600',
+const BAR_COLORS = ['#22c55e', '#f97316', '#c2410c', '#ef4444']
+const BAR_LABELS = ['', 'Easy', 'Medium', 'Hard', 'Extreme']
+
+function DifficultyBars({ level }) {
+  // level 1–4
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-[3px]">
+        {[1,2,3,4].map(i => (
+          <div key={i}
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '2px',
+              backgroundColor: i <= level ? BAR_COLORS[i - 1] : '#e5e7eb',
+              transition: 'background-color 0.2s',
+            }}
+          />
+        ))}
+      </div>
+      <span className="text-[10px] font-medium" style={{ color: level > 0 ? BAR_COLORS[level - 1] : '#9ca3af' }}>
+        {BAR_LABELS[level] || ''}
+      </span>
+    </div>
+  )
 }
 
 export default function ExploreTab({ initialSection, initialMethodId }) {
@@ -87,10 +67,12 @@ export default function ExploreTab({ initialSection, initialMethodId }) {
 
   const [methods, setMethods] = useState([])
   const [gymExercises, setGymExercises] = useState([])
+  const [challenges, setChallenges] = useState([])
+  const [completedChallenges, setCompletedChallenges] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedMethod, setExpandedMethod] = useState(initialMethodId || null)
-  const [expandedChallenge, setExpandedChallenge] = useState(null)
   const [methodFilter, setMethodFilter] = useState('all')
+  const [challengeDiffFilter, setChallengeDiffFilter] = useState('all')
   const [showRequest, setShowRequest] = useState(false)
   const [reqName, setReqName] = useState('')
   const [reqDesc, setReqDesc] = useState('')
@@ -109,13 +91,28 @@ export default function ExploreTab({ initialSection, initialMethodId }) {
   }, [initialMethodId])
 
   const loadData = async () => {
-    const [{ data }, { data: gymData }] = await Promise.all([
+    const [{ data }, { data: gymData }, { data: challengeData }, { data: profileData }] = await Promise.all([
       supabase.from('training_methods').select('*').order('name'),
       supabase.from('exercises').select('*').not('equipment_required', 'eq', '{}').order('name'),
+      supabase.from('workout_challenges')
+        .select('id, name, short_description, difficulty_level, category, duration_min, duration_max')
+        .order('difficulty_level'),
+      supabase.from('profiles').select('completed_challenges').eq('id', user.id).single(),
     ])
     setMethods(data || [])
     setGymExercises(gymData?.filter(e => e.equipment_required?.length > 0) || [])
+    setChallenges(challengeData || [])
+    setCompletedChallenges(profileData?.completed_challenges || [])
     setLoading(false)
+  }
+
+  const toggleChallengeComplete = async (id) => {
+    const isCompleted = completedChallenges.includes(id)
+    const updated = isCompleted
+      ? completedChallenges.filter(c => c !== id)
+      : [...completedChallenges, id]
+    setCompletedChallenges(updated)
+    await supabase.from('profiles').update({ completed_challenges: updated }).eq('id', user.id)
   }
 
   const filteredMethods = methods.filter(m => methodFilter === 'all' || m.category === methodFilter)
@@ -177,64 +174,59 @@ export default function ExploreTab({ initialSection, initialMethodId }) {
             <div>
               <div className="mb-4">
                 <h2 className="text-lg font-black text-dark">Challenges</h2>
-                <p className="text-xs text-muted mt-0.5">Structured programs to level up specific skills. Complete them for XP rewards.</p>
+                <p className="text-xs text-muted mt-0.5">Short, competitive mini-challenges. Attempt them at the end of any workout.</p>
               </div>
-              <div className="space-y-3">
-                {CHALLENGES.map(ch => {
-                  const expanded = expandedChallenge === ch.id
-                  const setExpanded = (v) => setExpandedChallenge(v ? ch.id : null)
-                  const diffClass = CHALLENGE_DIFF_COLORS[ch.difficulty] || CHALLENGE_DIFF_COLORS.intermediate
-                  const catClass = CHALLENGE_CAT_COLORS[ch.category] || 'bg-surface text-dark'
+
+              {/* Difficulty filter */}
+              <div className="flex gap-1.5 mb-4 flex-wrap">
+                {[
+                  { id: 'all', label: 'All', color: '#1f2937' },
+                  { id: 2, label: 'Easy',    color: BAR_COLORS[0] },
+                  { id: 3, label: 'Medium',  color: BAR_COLORS[1] },
+                  { id: 4, label: 'Hard',    color: BAR_COLORS[2] },
+                  { id: 5, label: 'Extreme', color: BAR_COLORS[3] },
+                ].map(f => (
+                  <button key={f.id} onClick={() => setChallengeDiffFilter(f.id)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                    style={challengeDiffFilter === f.id
+                      ? { backgroundColor: f.color, color: '#fff' }
+                      : { backgroundColor: '#f3f4f6', color: '#6b7280' }
+                    }>
+                    {f.id !== 'all' && (
+                      <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+                        style={{ backgroundColor: f.color }} />
+                    )}
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {challenges.length === 0 && (
+                <div className="text-center py-12 text-muted text-sm">No challenges found.</div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {challenges.filter(ch => challengeDiffFilter === 'all' || ch.difficulty_level === challengeDiffFilter).map(ch => {
+                  const isCompleted = completedChallenges.includes(ch.id)
+                  const catEmoji = CHALLENGE_CAT_EMOJIS[ch.category] || '⚡'
+                  const barLevel = Math.max(1, Math.min(4, (ch.difficulty_level || 3) - 1))
                   return (
-                    <div key={ch.id} className="bg-white border border-border rounded-2xl overflow-hidden">
-                      <button onClick={() => setExpanded(!expanded)}
-                        className="w-full text-left p-5 flex items-center justify-between hover:bg-red-50/20 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                            {ch.icon}
-                          </div>
-                          <div>
-                            <div className="text-base font-bold text-dark">{ch.title}</div>
-                            <div className="text-xs text-muted mt-0.5">{ch.desc.substring(0, 60)}...</div>
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${diffClass}`}>{ch.difficulty}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${catClass}`}>{ch.category}</span>
-                              <span className="text-[9px] text-dim">⏱ {ch.duration}</span>
-                              <span className="text-[9px] text-green-600 font-medium">{ch.reward}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <span className={`text-dim text-xs transition-transform flex-shrink-0 ml-2 ${expanded ? 'rotate-180' : ''}`}>&darr;</span>
+                    <div key={ch.id} className="bg-white border border-border rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="text-sm flex-shrink-0">{catEmoji}</span>
+                        {ch.duration_min && (
+                          <span className="text-[9px] text-dim">~{ch.duration_min}–{ch.duration_max}m</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] font-bold text-dark leading-tight">{ch.name}</div>
+                      <DifficultyBars level={barLevel} />
+                      <button onClick={() => toggleChallengeComplete(ch.id)}
+                        className={`w-full py-1 rounded-full text-[10px] font-bold transition-all ${
+                          isCompleted
+                            ? 'bg-green-500 text-white'
+                            : 'bg-surface border border-border text-muted hover:border-green-400 hover:text-green-600'
+                        }`}>
+                        {isCompleted ? 'Completed ✓' : 'Mark'}
                       </button>
-                      {expanded && (
-                        <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
-                          <p className="text-sm text-muted leading-relaxed">{ch.desc}</p>
-                          <div className="bg-surface rounded-xl p-4">
-                            <h4 className="text-xs font-bold text-dark mb-3">Weekly Breakdown</h4>
-                            <div className="space-y-2">
-                              {ch.weeks.map((w, i) => (
-                                <div key={i} className="flex gap-2 text-sm text-muted items-start">
-                                  <span className="text-red-500 font-bold text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
-                                  <span>{w}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{ch.badge}</span>
-                              <div>
-                                <div className="text-xs font-bold text-dark">Completion Badge</div>
-                                <div className="text-[10px] text-muted">Finish to unlock</div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-green-600">{ch.reward}</div>
-                              <div className="text-[9px] text-dim">on completion</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
