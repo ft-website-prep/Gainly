@@ -82,10 +82,18 @@ Three tabs: **Train**, **Build**, **Explore**.
 
 ### Explore Tab (`ExploreTab.jsx`)
 - **Two-level navigation**: 2 parent tiles (Calisthenics / Krafttraining)
-- Calisthenics → sub-tabs: 🌳 Skill Trees | 📖 Methods
+- Calisthenics → sub-tabs: 🌳 Skill Trees | 📖 Methods | ⚡ Challenges
 - Krafttraining → category tile grid (icon + label + count) → exercise grid with back button
 - `initialMethodId` prop: auto-navigates to Calisthenics > Methods and expands that method
 - Category icons: `{ push: '💪', pull: '🔽', legs: '🦵', core: '🔥', cardio: '❤️', flexibility: '🌀' }`
+
+#### Challenges sub-tab
+- Short competitive mini-challenges (1–4 min), fetched from `workout_challenges` table (separate from `challenges` which is for community group challenges)
+- **DifficultyBars**: 4 uniform squares, colored green/orange/dark-orange/red (Easy→Medium→Hard→Extreme)
+- Difficulty filter chips (All / Easy / Medium / Hard / Extreme) with matching colors
+- 2-column card grid; compact layout with emoji, name, difficulty bars, duration, Mark button
+- Completion state stored in `profiles.completed_challenges` (jsonb array of IDs) — same pattern as `favorited_exercises`
+- `toggleChallengeComplete(id)` does optimistic update + Supabase write
 
 ---
 
@@ -107,7 +115,7 @@ Body metrics (BMI, KFA) via modal. League system: Rookie → Grinder → Athlete
 
 ## Supabase Schema (key tables)
 
-- `profiles` — user profile, `favorited_exercises` (jsonb array), `weight_kg`, `height_cm`, `bmi_value`, `body_fat_pct`, `xp_total`, `current_streak`
+- `profiles` — user profile, `favorited_exercises` (jsonb array), `completed_challenges` (jsonb array), `weight_kg`, `height_cm`, `bmi_value`, `body_fat_pct`, `xp_total`, `current_streak`
 - `workouts` — `created_by`, `is_favorited` (bool), `estimated_duration`, `tags`
 - `workout_exercises` — `workout_id`, `exercise_id`, `order_index`, `target_sets`, `target_reps`, `target_time_seconds`, `rest_seconds`
 - `exercises` — `name`, `category`, `difficulty`, `tracking_type` (reps/time), `equipment_required` (array), `primary_muscles`
@@ -118,3 +126,4 @@ Body metrics (BMI, KFA) via modal. League system: Rookie → Grinder → Athlete
 - `exercise_requests` — user-submitted exercise requests
 - `progress_timeline` — photo/video entries per user
 - `body_measurements` — weight history
+- `workout_challenges` — short mini-challenges (name, short_description, difficulty_level 2–5, category, duration_min/max). **Not** the same as `challenges` (reserved for community group challenges)
