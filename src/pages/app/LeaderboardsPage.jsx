@@ -3,11 +3,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 
 const TIERS = [
-  { name: 'Bronze',   min: 0,     max: 999,   color: 'from-amber-700 to-amber-600', text: 'text-amber-700', bg: 'bg-amber-50',   border: 'border-amber-200', icon: '🥉' },
-  { name: 'Silver',   min: 1000,  max: 2499,  color: 'from-slate-400 to-slate-500', text: 'text-slate-500', bg: 'bg-slate-50',   border: 'border-slate-200', icon: '🥈' },
-  { name: 'Gold',     min: 2500,  max: 4999,  color: 'from-yellow-500 to-amber-400',text: 'text-yellow-600',bg: 'bg-yellow-50',  border: 'border-yellow-200',icon: '🥇' },
-  { name: 'Platinum', min: 5000,  max: 9999,  color: 'from-cyan-500 to-sky-500',    text: 'text-cyan-600', bg: 'bg-cyan-50',    border: 'border-cyan-200',  icon: '💠' },
-  { name: 'Diamond',  min: 10000, max: Infinity, color: 'from-violet-500 to-purple-600', text: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200', icon: '💎' },
+  { name: 'Bronze',   min: 0,      max: 999,    color: 'from-amber-700 to-amber-600',    text: 'text-amber-700',  bg: 'bg-amber-50',   border: 'border-amber-200',  icon: '🥉', desc: 'Just getting started' },
+  { name: 'Silver',   min: 1000,   max: 2499,   color: 'from-slate-400 to-slate-500',    text: 'text-slate-500',  bg: 'bg-slate-50',   border: 'border-slate-200',  icon: '🥈', desc: 'Building consistency' },
+  { name: 'Gold',     min: 2500,   max: 4999,   color: 'from-yellow-500 to-amber-400',   text: 'text-yellow-600', bg: 'bg-yellow-50',  border: 'border-yellow-200', icon: '🥇', desc: 'Rising athlete' },
+  { name: 'Platinum', min: 5000,   max: 9999,   color: 'from-cyan-500 to-sky-500',       text: 'text-cyan-600',   bg: 'bg-cyan-50',    border: 'border-cyan-200',   icon: '💠', desc: 'Serious competitor' },
+  { name: 'Diamond',  min: 10000,  max: 24999,  color: 'from-violet-500 to-purple-600',  text: 'text-violet-600', bg: 'bg-violet-50',  border: 'border-violet-200', icon: '💎', desc: 'Elite level' },
+  { name: 'Obsidian', min: 25000,  max: 74999,  color: 'from-gray-800 to-gray-900',      text: 'text-gray-700',   bg: 'bg-gray-100',   border: 'border-gray-300',   icon: '🖤', desc: 'Dedicated warrior' },
+  { name: 'Mythic',   min: 75000,  max: 199999, color: 'from-fuchsia-500 to-purple-700', text: 'text-fuchsia-600',bg: 'bg-fuchsia-50', border: 'border-fuchsia-200',icon: '🔮', desc: 'Living legend' },
+  { name: 'Ascended', min: 200000, max: Infinity,color: 'from-red-500 via-amber-400 to-red-600', text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: '⭐', desc: 'Beyond human limits' },
 ]
 
 const EXERCISE_BOARDS = [
@@ -99,41 +102,61 @@ export default function LeaderboardsPage() {
 
       {/* My Rank Card */}
       {myProfile && (
-        <div className={`bg-gradient-to-br ${myTier.color} rounded-2xl p-5 text-white`}>
+        <div className={`bg-gradient-to-br ${myTier.color} rounded-2xl p-5 text-white relative overflow-hidden`}>
+          {/* Decorative glow */}
+          <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-[10px] text-white/60 mb-0.5">YOUR RANK</div>
-              <div className="text-4xl font-black">#{myRank || '—'}</div>
+              <div className="text-[10px] text-white/60 mb-0.5 uppercase tracking-wider">Your Global Rank</div>
+              <div className="text-5xl font-black leading-none">#{myRank || '—'}</div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-white/60 mb-0.5">TIER</div>
-              <div className="text-2xl">{myTier.icon}</div>
-              <div className="text-sm font-bold">{myTier.name}</div>
+              <div className="text-4xl mb-0.5">{myTier.icon}</div>
+              <div className="text-sm font-black">{myTier.name}</div>
+              <div className="text-[9px] text-white/60">{myTier.desc}</div>
             </div>
           </div>
-          <div className="mb-1 flex justify-between text-[10px] text-white/70">
+          <div className="mb-1.5 flex justify-between text-[10px] text-white/70">
             <span>{myXP.toLocaleString()} XP</span>
-            {nextTier && <span>{nextTier.min.toLocaleString()} XP for {nextTier.icon} {nextTier.name}</span>}
+            {nextTier ? <span>{nextTier.min.toLocaleString()} XP → {nextTier.icon} {nextTier.name}</span> : <span>Max tier reached ⭐</span>}
           </div>
-          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all" style={{ width: `${progressToNext}%` }} />
+          <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-white rounded-full transition-all shadow-sm" style={{ width: `${progressToNext}%` }} />
           </div>
+          {nextTier && (
+            <div className="mt-2 text-[9px] text-white/50">
+              {(nextTier.min - myXP).toLocaleString()} XP to {nextTier.name}
+            </div>
+          )}
         </div>
       )}
 
       {/* Tier Legend */}
       <div className="bg-white border border-border rounded-2xl p-4">
-        <div className="text-xs font-bold text-dark mb-3">Tier System</div>
-        <div className="flex gap-2 flex-wrap">
-          {TIERS.map(t => (
-            <div key={t.name} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${t.bg} ${t.border} ${myTier.name === t.name ? 'ring-2 ring-offset-1 ring-red-400' : ''}`}>
-              <span className="text-sm">{t.icon}</span>
-              <div>
-                <div className={`text-[10px] font-bold ${t.text}`}>{t.name}</div>
-                <div className="text-[8px] text-dim">{t.min >= 10000 ? '10k+' : `${t.min >= 1000 ? t.min/1000+'k' : t.min}–${t.max >= 10000 ? '10k' : t.max >= 1000 ? t.max/1000+'k' : t.max}`} XP</div>
+        <div className="text-xs font-bold text-dark mb-3">All Tiers — How far can you climb?</div>
+        <div className="space-y-2">
+          {TIERS.map((t, i) => {
+            const isMe = myTier.name === t.name
+            const isUnlocked = myXP >= t.min
+            return (
+              <div key={t.name} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${isMe ? `${t.bg} ${t.border} ring-2 ring-offset-1 ring-red-400` : isUnlocked ? `${t.bg} ${t.border}` : 'bg-surface border-border opacity-50'}`}>
+                <span className="text-lg w-7 text-center">{t.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${isUnlocked ? t.text : 'text-dim'}`}>{t.name}</span>
+                    {isMe && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">YOU</span>}
+                    {isUnlocked && !isMe && <span className="text-[9px] text-green-500 font-bold">✓</span>}
+                  </div>
+                  <div className="text-[9px] text-dim">{t.desc}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-[9px] text-dim font-medium">
+                    {t.min >= 1000 ? `${t.min/1000}k` : t.min} XP
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
