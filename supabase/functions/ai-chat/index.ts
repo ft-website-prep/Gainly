@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     // --- 6. SYSTEM PROMPT BAUEN ---
 
     // Workout-Historie als lesbaren Text formatieren
-    const workoutSummary = (recentWorkouts || [])
+    const workoutSummary = ((recentWorkouts || []) as any[])
       .map((w) => {
         const date = new Date(w.started_at).toLocaleDateString("en", {
           month: "short",
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       .join("\n");
 
     // Progressionen als lesbaren Text formatieren
-    const progressSummary = (exerciseProgress || [])
+    const progressSummary = ((exerciseProgress || []) as any[])
       .map((p) => {
         const name = p.exercises?.name || "Unknown";
         const stage = p.exercise_progressions?.stage_name;
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
 
     // Equipment als lesbaren Text formatieren
     const equipmentList = (profile?.equipment || []).length > 0
-      ? profile.equipment.join(", ")
+      ? (profile?.equipment || []).join(", ")
       : "No equipment (bodyweight only)";
 
     // Liga berechnen
@@ -312,9 +312,10 @@ ${progressSummary || "No progression data yet."}
       }
     );
 
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: err.message }),
+      JSON.stringify({ error: "Internal server error", details: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
