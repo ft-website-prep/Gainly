@@ -46,7 +46,7 @@ Tailwind CSS with a custom "Gainly Red" color palette (`tailwind.config.js`). Pr
 ### Key Directories
 
 - `src/pages/app/` — top-level page components (Dashboard, WorkoutsPage, ProfilePage, etc.)
-- `src/components/workouts/` — workout subsystem: Build/Train/Explore tabs, SkillTrees, DailyGoal
+- `src/components/workouts/` — workout subsystem: Build/Train/Explore tabs, SkillTrees, DailyGoal, GymMethods
 - `src/components/app/AppLayout.jsx` — sidebar + layout shell for all `/app/*` pages
 - `src/lib/supabaseClient.js` — Supabase client (reads from `.env`)
 - `src/contexts/` — React contexts (currently just Auth)
@@ -79,13 +79,23 @@ Three tabs: **Train**, **Build**, **Explore**.
 - **SavedExercisesModal**: opens all favorited exercises; can unsave or add directly to current workout
 - Exercise favorites stored in `profiles.favorited_exercises` (jsonb array of IDs). Favorited heart is **red** (`text-red-500`)
 - Detail view modal: editable name, per-exercise sets/reps/rest inputs + notes textarea + warm-up checkbox
+- Each source has its own category set:
+  - Cali: `all, push, pull, legs, core, cardio, flexibility`
+  - Gym: `all, chest, back, lower_back, traps, shoulders, biceps, triceps, forearms, quads, hamstrings, calves, adductors, abductors, abs, push, pull, core`
+  - Mix: union of both
 
 ### Explore Tab (`ExploreTab.jsx`)
 - **Two-level navigation**: 2 parent tiles (Calisthenics / Krafttraining)
 - Calisthenics → sub-tabs: 🌳 Skill Trees | 📖 Methods | ⚡ Challenges
-- Krafttraining → category tile grid (icon + label + count) → exercise grid with back button
+- Krafttraining → deep multi-level navigation:
+  - Top-level category tiles → some open sub-groups, some go straight to exercise grid
+  - **Group categories**: Legs (quads/hamstrings/calves/adductors/abductors), Arms (biceps/triceps/forearms), Back (back/lower_back/traps)
+  - **Abs**: 12 subgroups (calisthenics, machine, cable, anti_rotation, weighted, dumbbell_kb, decline, stability_ball, bosu, bands, rollouts, mobility)
+  - **Shoulders**: anterior / lateral / posterior / general sub-tabs
+  - Chest/Push/Pull/Core → subcategory filter (strength / athletic / mobility)
+  - **GymMethods** component (`GymMethods.jsx`): training method cards for gym; supports day scheduling, exercise swapping, and saving sessions
 - `initialMethodId` prop: auto-navigates to Calisthenics > Methods and expands that method
-- Category icons: `{ push: '💪', pull: '🔽', legs: '🦵', core: '🔥', cardio: '❤️', flexibility: '🌀' }`
+- Category icons: `GYM_CAT_ICONS` map covers all gym muscle groups (see ExploreTab.jsx)
 
 #### Challenges sub-tab
 - Short competitive mini-challenges (1–4 min), fetched from `workout_challenges` table (separate from `challenges` which is for community group challenges)

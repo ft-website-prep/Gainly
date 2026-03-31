@@ -63,9 +63,35 @@ export default function TrainTab({ onStartWorkout, onGoToExplore }) {
     onStartWorkout({ workoutId: w.id, workoutName: w.name, exercises })
   }
 
+  // Single delete
   const handleDelete = async (id) => {
     if (!confirm('Delete this workout?')) return
     await supabase.from('workouts').delete().eq('id', id)
+    await loadData()
+  }
+
+  // Multi-select delete
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} workout${selectedIds.size > 1 ? 's' : ''}?`)) return
+    await supabase.from('workouts').delete().in('id', [...selectedIds])
+    exitSelectMode()
     await loadData()
   }
 
@@ -285,15 +311,41 @@ export default function TrainTab({ onStartWorkout, onGoToExplore }) {
       {/* My Workouts */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-black text-dark">My Workouts</h2>
-          <span className="text-xs text-muted">{workouts.length}</span>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-black text-dark">My Workouts</h2>
+            <span className="text-xs text-muted">{workouts.length}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectMode ? (
+              <>
+                {selectedIds.size > 0 && (
+                  <button onClick={handleBulkDelete}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-all">
+                    🗑 Delete ({selectedIds.size})
+                  </button>
+                )}
+                <button onClick={exitSelectMode}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface transition-all">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              workouts.length > 0 && (
+                <button onClick={() => setSelectMode(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface transition-all">
+                  Select
+                </button>
+              )
+            )}
+          </div>
         </div>
 
         {workouts.length > 0 ? (
           <div className="space-y-3">
             {workouts.map(w => (
               <WorkoutCard key={w.id} w={w} onDetail={openDetail} onDelete={handleDelete}
-                onStart={handleStart} onToggleFav={toggleFavoriteWorkout} />
+                onStart={handleStart} onToggleFav={toggleFavoriteWorkout}
+                selectMode={selectMode} isSelected={selectedIds.has(w.id)} onToggleSelect={toggleSelect} />
             ))}
           </div>
         ) : (
@@ -337,14 +389,29 @@ function addToGoogleCalendar(w) {
   window.open(url, '_blank')
 }
 
-function WorkoutCard({ w, onDetail, onDelete, onStart, onToggleFav }) {
+function WorkoutCard({ w, onDetail, onDelete, onStart, onToggleFav, selectMode, isSelected, onToggleSelect }) {
   const exList = (w.workout_exercises || []).sort((a, b) => a.order_index - b.order_index)
   return (
-    <div className="bg-white border border-border rounded-2xl overflow-hidden transition-shadow hover:shadow-md">
+    <div
+      className={`bg-white border rounded-2xl overflow-hidden transition-all ${
+        selectMode && isSelected ? 'border-red-400 bg-red-50/30' : 'border-border hover:shadow-md'
+      }`}
+      onClick={selectMode ? () => onToggleSelect(w.id) : undefined}
+    >
       <div className="p-4 flex items-center justify-between">
+        {selectMode && (
+          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center mr-3 flex-shrink-0 transition-all ${
+            isSelected ? 'bg-red-500 border-red-500' : 'border-border bg-white'
+          }`}>
+            {isSelected && <span className="text-white text-[10px] font-black">✓</span>}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 onClick={() => onDetail(w)} className="text-sm font-bold text-dark hover:underline cursor-pointer">{w.name}</h3>
+            <h3
+              onClick={selectMode ? undefined : (e) => { e.stopPropagation(); onDetail(w) }}
+              className={`text-sm font-bold text-dark ${!selectMode ? 'hover:underline cursor-pointer' : ''}`}
+            >{w.name}</h3>
             {w.estimated_duration && <span className="text-[9px] text-dim">~{w.estimated_duration}min</span>}
           </div>
           <div className="flex gap-1 mt-2 flex-wrap">
@@ -354,20 +421,22 @@ function WorkoutCard({ w, onDetail, onDelete, onStart, onToggleFav }) {
             {exList.length > 4 && <span className="text-[9px] text-dim">+{exList.length - 4}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-          <button onClick={() => onToggleFav(w)}
-            className={`text-base leading-none hover:scale-110 transition-transform ${w.is_favorited ? 'text-red-500' : 'text-muted'}`}
-            title={w.is_favorited ? 'Unfavorite' : 'Favorite'}>
-            {w.is_favorited ? '♥' : '♡'}
-          </button>
-          <button onClick={() => addToGoogleCalendar(w)} className="text-dim hover:text-blue-500 text-xs p-1 rounded-lg hover:bg-blue-50 transition-all" title="Add to Google Calendar">📅</button>
-          <button onClick={() => onDelete(w.id)} className="text-dim hover:text-red-500 text-xs p-1 rounded-lg hover:bg-red-50 transition-all">🗑</button>
-          <button onClick={() => onDetail(w)} className="text-dim hover:text-dark text-xs p-1 rounded-lg hover:bg-surface transition-all">✏️</button>
-          <button onClick={() => onStart(w)}
-            className="py-2.5 px-4 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 shadow-sm transition-all">
-            ▶ Start
-          </button>
-        </div>
+        {!selectMode && (
+          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+            <button onClick={() => onToggleFav(w)}
+              className={`text-base leading-none hover:scale-110 transition-transform ${w.is_favorited ? 'text-red-500' : 'text-muted'}`}
+              title={w.is_favorited ? 'Unfavorite' : 'Favorite'}>
+              {w.is_favorited ? '♥' : '♡'}
+            </button>
+            <button onClick={() => addToGoogleCalendar(w)} className="text-dim hover:text-blue-500 text-xs p-1 rounded-lg hover:bg-blue-50 transition-all" title="Add to Google Calendar">📅</button>
+            <button onClick={() => onDelete(w.id)} className="text-dim hover:text-red-500 text-xs p-1 rounded-lg hover:bg-red-50 transition-all">🗑</button>
+            <button onClick={() => onDetail(w)} className="text-dim hover:text-dark text-xs p-1 rounded-lg hover:bg-surface transition-all">✏️</button>
+            <button onClick={() => onStart(w)}
+              className="py-2.5 px-4 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 shadow-sm transition-all">
+              ▶ Start
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

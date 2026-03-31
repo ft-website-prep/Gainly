@@ -2,10 +2,18 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 
-const CATEGORIES = ['all', 'push', 'pull', 'legs', 'core', 'cardio', 'flexibility']
+const CALI_CATEGORIES = ['all', 'push', 'pull', 'legs', 'core', 'cardio', 'flexibility']
+const GYM_CATEGORIES  = ['all', 'chest', 'back', 'lower_back', 'traps', 'shoulders',
+                         'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'calves',
+                         'adductors', 'abductors', 'abs', 'push', 'pull', 'core']
+const MIX_CATEGORIES  = ['all', 'push', 'pull', 'legs', 'core', 'cardio', 'flexibility',
+                         'chest', 'back', 'shoulders', 'biceps', 'triceps', 'abs']
 
 const CAT_ICONS = {
   all: '✦', push: '⬆️', pull: '⬇️', legs: '🦵', core: '💎', cardio: '❤️', flexibility: '🌀',
+  chest: '🫁', back: '🔙', lower_back: '⬇️', traps: '🏔️', shoulders: '🦾',
+  biceps: '💪', triceps: '💪', forearms: '🦾', quads: '🦵', hamstrings: '🦵',
+  calves: '🦶', adductors: '🦵', abductors: '🦵', abs: '🔥',
 }
 
 const DIFF_COLORS = {
@@ -64,8 +72,8 @@ export default function BuildTab() {
 
   const filtered = useMemo(() => {
     let result = exercises
-    if (source === 'cali') result = result.filter(e => !e.equipment_required?.length)
-    if (source === 'gym')  result = result.filter(e => e.equipment_required?.length > 0)
+    if (source === 'cali') result = result.filter(e => e.source === 'cali' || !e.source)
+    if (source === 'gym')  result = result.filter(e => e.source === 'gym')
     if (catFilter !== 'all') result = result.filter(e => e.category === catFilter)
     if (search) result = result.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
     if (showSaved) result = result.filter(e => favExercises.includes(e.id))
@@ -138,6 +146,8 @@ export default function BuildTab() {
 
   if (loading) return <div className="text-center py-12 text-muted">Loading...</div>
 
+  const CATEGORIES = source === 'gym' ? GYM_CATEGORIES : source === 'mix' ? MIX_CATEGORIES : CALI_CATEGORIES
+
   const sourceConfig = {
     cali: { label: 'Calisthenics', icon: '🤸', desc: 'Bodyweight only', color: 'from-green-500 to-emerald-600' },
     gym:  { label: 'Gym',          icon: '🏋️', desc: 'Equipment-based', color: 'from-red-500 to-red-600' },
@@ -151,7 +161,7 @@ export default function BuildTab() {
         {/* Source Toggle */}
         <div className="flex gap-2 mb-5">
           {Object.entries(sourceConfig).map(([key, cfg]) => (
-            <button key={key} onClick={() => { setSource(key); setCatFilter('all'); setSearch(''); setShowSaved(false) }}
+            <button key={key} onClick={() => { setSource(key); setCatFilter('all'); setSearch(''); setShowSaved(false); }}
               className={`flex-1 p-3.5 rounded-xl text-left transition-all ${source === key ? `bg-gradient-to-br ${cfg.color} text-white shadow-lg` : 'bg-white border border-border text-muted hover:border-red-200 hover:shadow-sm'}`}>
               <div className="text-xl mb-1">{cfg.icon}</div>
               <div className={`text-xs font-bold ${source === key ? 'text-white' : 'text-dark'}`}>{cfg.label}</div>
@@ -160,34 +170,6 @@ export default function BuildTab() {
           ))}
         </div>
 
-        {/* Search + Category Filter */}
-        <div className="mb-4 space-y-2.5">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..."
-            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
-          <div className="flex gap-1.5 flex-wrap">
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => { setCatFilter(c); setShowSaved(false) }}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${catFilter === c && !showSaved ? 'bg-dark text-white' : 'bg-white border border-border text-muted hover:border-red-200'}`}>
-                <span>{CAT_ICONS[c]}</span>
-                {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
-              </button>
-            ))}
-            <button onClick={() => { setShowSaved(s => !s); setCatFilter('all') }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${showSaved ? 'bg-red-500 text-white' : 'bg-white border border-border text-muted hover:border-red-200'}`}>
-              ❤️ Saved
-            </button>
-            {favExercises.length > 0 && (
-              <button onClick={() => setShowSavedModal(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 border border-red-200 text-red-500 hover:bg-red-100 transition-all ml-auto">
-                ♥ Liste öffnen ({favExercises.length})
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Exercise Grid */}
-        <ExGrid exercises={filtered} selected={selected} toggleSelect={toggleSelect} links={links}
-          favExercises={favExercises} toggleFav={toggleFavExercise} />
       </div>
 
       {/* RIGHT: Workout Builder */}
@@ -280,7 +262,6 @@ export default function BuildTab() {
                 <div className="text-center py-8 space-y-1">
                   <div className="text-3xl opacity-30">+</div>
                   <p className="text-[11px] text-muted">Tap exercises to add them</p>
-                  <p className="text-[10px] text-dim">{filtered.length} available</p>
                 </div>
               )}
             </div>
