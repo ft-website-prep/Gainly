@@ -120,52 +120,6 @@ function DateRangePicker({ range, onChange }) {
 }
 
 // =============================================
-// ACTIVITY CALENDAR (with weekday + month labels)
-// =============================================
-function ActivityCalendar({ workoutDates, days = 84 }) {
-  const allDays = []
-  const today = new Date()
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i)
-    allDays.push({ date: d.toISOString().split('T')[0], count: workoutDates.filter(wd => wd === d.toISOString().split('T')[0]).length, month: d.getMonth() })
-  }
-  const weeks = []
-  for (let i = 0; i < allDays.length; i += 7) weeks.push(allDays.slice(i, i + 7))
-  const monthLabels = []; let lastM = -1
-  weeks.forEach((w, wi) => { const m = w[0].month; if (m !== lastM) { monthLabels.push({ idx: wi, label: new Date(2024, m).toLocaleString('en', { month: 'short' }) }); lastM = m } })
-  const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', '']
-  return (
-    <div className="overflow-x-auto">
-      <div className="inline-flex gap-0">
-        <div className="flex flex-col gap-[3px] mr-2 mt-5">
-          {dayLabels.map((l, i) => <div key={i} className="h-[13px] text-[9px] text-dim leading-[13px]">{l}</div>)}
-        </div>
-        <div>
-          <div className="flex gap-[3px] mb-1">
-            {weeks.map((_, wi) => { const ml = monthLabels.find(m => m.idx === wi); return <div key={wi} className="w-[13px] text-center"><span className="text-[8px] text-dim">{ml?.label || ''}</span></div> })}
-          </div>
-          <div className="flex gap-[3px]">
-            {weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-[3px]">
-                {week.map((day, di) => (
-                  <div key={di} title={`${day.date} – ${day.count} workout${day.count !== 1 ? 's' : ''}`}
-                    className={`w-[13px] h-[13px] rounded-sm ${day.count >= 2 ? 'bg-red-500' : day.count === 1 ? 'bg-sky-300' : 'bg-gray-100'}`} />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 mt-2">
-        <span className="text-[9px] text-dim">Less</span>
-        <div className="w-[9px] h-[9px] rounded-sm bg-gray-100" /><div className="w-[9px] h-[9px] rounded-sm bg-sky-300" /><div className="w-[9px] h-[9px] rounded-sm bg-red-500" />
-        <span className="text-[9px] text-dim">More</span>
-      </div>
-    </div>
-  )
-}
-
-// =============================================
 // BMI / KFA INPUT MODAL
 // =============================================
 function BodyMetricsModal({ profile, onClose, onSave }) {
@@ -460,6 +414,11 @@ export default function ProfilePage() {
   const [showMetricsModal, setShowMetricsModal] = useState(false)
   const [showProgressModal, setShowProgressModal] = useState(false)
 
+  // Google Calendar
+  const [calendarUrl, setCalendarUrl] = useState(() => localStorage.getItem('gainly_gcal_url') || '')
+  const [calendarInput, setCalendarInput] = useState('')
+  const [showCalendarEdit, setShowCalendarEdit] = useState(false)
+
   const [username, setUsername] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [bio, setBio] = useState('')
@@ -467,8 +426,6 @@ export default function ProfilePage() {
 
   // Stats
   const [statsRange, setStatsRange] = useState(30)
-  const [calendarRange, setCalendarRange] = useState(84)
-  const [workoutDates, setWorkoutDates] = useState([])
   const [workoutCount, setWorkoutCount] = useState(0)
   const [achievementCount, setAchievementCount] = useState(0)
   const [xpData, setXpData] = useState([])
@@ -479,17 +436,11 @@ export default function ProfilePage() {
 
   useEffect(() => { if (user) { loadProfile(); loadTimeline(); loadWeightHistory() } }, [user])
   useEffect(() => { if (user) loadStats() }, [user, statsRange])
-  useEffect(() => { if (user) loadCalendar() }, [user, calendarRange])
 
   const loadProfile = async () => {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     if (data) { setProfile(data); setUsername(data.username || ''); setAvatarUrl(data.avatar_url || ''); setBio(data.bio || ''); setBioPublic(data.bio_public ?? false); if (!data.username) setEditMode(true) }
     setLoading(false)
-  }
-
-  const loadCalendar = async () => {
-    const { data } = await supabase.from('workout_logs').select('started_at').eq('user_id', user.id).gte('started_at', new Date(Date.now() - calendarRange * 86400000).toISOString())
-    setWorkoutDates((data || []).map(l => l.started_at?.split('T')[0]).filter(Boolean))
   }
 
   const loadWeightHistory = async () => {
@@ -632,19 +583,6 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Activity Calendar */}
-          <div className="bg-white border border-border rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-dark">Activity Calendar</h2>
-              <div className="flex gap-1 bg-surface rounded-lg p-0.5">
-                {[{ l: '3M', d: 84 }, { l: '6M', d: 168 }, { l: '1Y', d: 365 }].map(p => (
-                  <button key={p.d} onClick={() => setCalendarRange(p.d)} className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${calendarRange === p.d ? 'bg-white text-dark shadow-sm' : 'text-muted'}`}>{p.l}</button>
-                ))}
-              </div>
-            </div>
-            <ActivityCalendar workoutDates={workoutDates} days={calendarRange} />
-          </div>
-
           {/* Progress Timeline (Photos/Videos only) */}
           <div className="bg-white border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
@@ -653,6 +591,67 @@ export default function ProfilePage() {
                 className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">+ Add Photo</button>
             </div>
             <PhotoTimeline entries={timeline} onDelete={handleDeleteProgress} />
+          </div>
+
+          {/* Google Calendar */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-bold text-dark">📅 Google Calendar</h2>
+                <p className="text-xs text-muted mt-0.5">Dein Trainingsplan direkt im Profil</p>
+              </div>
+              <button
+                onClick={() => { setShowCalendarEdit(e => !e); setCalendarInput(calendarUrl) }}
+                className="text-red-500 hover:text-red-600 text-xs font-semibold transition-colors">
+                {calendarUrl ? 'Bearbeiten' : 'Verknüpfen'}
+              </button>
+            </div>
+
+            {showCalendarEdit && (
+              <div className="mb-5 space-y-3 bg-surface rounded-xl p-4 border border-border">
+                <p className="text-xs text-muted leading-relaxed">
+                  <strong className="text-dark">So geht's:</strong> Google Calendar öffnen → Einstellungen → deinen Kalender auswählen → "In andere Apps einbetten" → die <code className="bg-white px-1 py-0.5 rounded text-[10px] border border-border">src</code>-URL aus dem iframe-Code kopieren.
+                </p>
+                <input type="url" value={calendarInput} onChange={e => setCalendarInput(e.target.value)}
+                  placeholder="https://calendar.google.com/calendar/embed?src=..."
+                  className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setCalendarUrl(calendarInput); localStorage.setItem('gainly_gcal_url', calendarInput); setShowCalendarEdit(false) }}
+                    disabled={!calendarInput.trim()}
+                    className="flex-1 py-2.5 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 disabled:opacity-30 transition-all">
+                    Speichern
+                  </button>
+                  {calendarUrl && (
+                    <button
+                      onClick={() => { setCalendarUrl(''); setCalendarInput(''); localStorage.removeItem('gainly_gcal_url'); setShowCalendarEdit(false) }}
+                      className="px-4 py-2.5 border border-border rounded-xl text-xs text-muted hover:text-red-500 hover:border-red-200 transition-all">
+                      Entfernen
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {calendarUrl ? (
+              <div className="rounded-xl overflow-hidden border border-border">
+                <iframe
+                  src={calendarUrl}
+                  style={{ border: 0 }}
+                  width="100%"
+                  height="600"
+                  frameBorder="0"
+                  scrolling="no"
+                  title="Google Calendar"
+                />
+              </div>
+            ) : !showCalendarEdit && (
+              <div className="text-center py-10 border-2 border-dashed border-border rounded-xl">
+                <div className="text-4xl mb-3">📅</div>
+                <p className="text-sm text-muted font-medium">Noch kein Kalender verknüpft</p>
+                <p className="text-xs text-dim mt-1">Klicke auf "Verknüpfen" um deinen Google Kalender einzubetten</p>
+              </div>
+            )}
           </div>
         </div>
       )}
