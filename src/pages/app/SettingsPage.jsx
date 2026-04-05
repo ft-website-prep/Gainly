@@ -77,7 +77,19 @@ export default function SettingsPage() {
     setLoading(false)
   }
 
-  const save = async (u) => { setSettings(prev => ({ ...prev, ...u })); await supabase.from('user_settings').update(u).eq('id', user.id) }
+  const save = async (u) => {
+    setSettings(prev => ({ ...prev, ...u }))
+    await supabase.from('user_settings').update(u).eq('id', user.id)
+    if ('dark_mode' in u) {
+      if (u.dark_mode) {
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('gainly_dark', '1')
+      } else {
+        document.documentElement.classList.remove('dark')
+        localStorage.removeItem('gainly_dark')
+      }
+    }
+  }
   const savePrivacy = async (u) => { setProfile(prev => ({ ...prev, ...u })); await supabase.from('profiles').update(u).eq('id', user.id) }
   const showMsg = (m) => { setMessage(m); setTimeout(() => setMessage(''), 4000) }
 
@@ -248,11 +260,8 @@ export default function SettingsPage() {
               <option value="de">Deutsch</option>
             </select>
           </SettingRow>
-          <SettingRow icon="🌙" label="Dark Mode" description="Switch theme">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-dim bg-surface px-2 py-1 rounded-lg">Soon</span>
-              <Toggle checked={settings?.dark_mode ?? false} onChange={val => save({ dark_mode: val })} />
-            </div>
+          <SettingRow icon="🌙" label="Dark Mode" description="Switch to a dark theme">
+            <Toggle checked={settings?.dark_mode ?? false} onChange={val => save({ dark_mode: val })} />
           </SettingRow>
           <SettingRow icon="📏" label="Units" description="Weight and distance">
             <select value={settings?.units || 'metric'} onChange={e => save({ units: e.target.value })}

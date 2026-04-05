@@ -2,3 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Gainly Design Tokens — Light Mode (default)
+   ============================================================ */
+:root {
+  --color-dark:        #0a0a0a;
+  --color-light:       #f6f6f6;
+  --color-surface:     #ffffff;
+  --color-border:      #eeeeee;
+  --color-muted:       #555555;
+  --color-dim:         #999999;
+  --color-accent-soft: #fff1f0;
+}
+
+/* ============================================================
+   Dark Mode Token Overrides
+   ============================================================ */
+html.dark {
+  --color-dark:        #f0f0f0;
+  --color-light:       #181818;
+  --color-surface:     #121212;
+  --color-border:      #2d2d2d;
+  --color-muted:       #999999;
+  --color-dim:         #555555;
+  --color-accent-soft: #2d0000;
+}
+
+html.dark body {
+  background-color: #181818;
+  color: #f0f0f0;
+}
+
+/* bg-white → surface in dark mode */
+html.dark .bg-white {
+  background-color: var(--color-surface);
+}
+
+/* Common Tailwind gray overrides */
+html.dark .bg-gray-50  { background-color: #1e1e1e; }
+html.dark .bg-gray-100 { background-color: #242424; }
+html.dark .bg-gray-200 { background-color: #2d2d2d; }
+
+html.dark .text-gray-900 { color: #f0f0f0; }
+html.dark .text-gray-800 { color: #dedede; }
+html.dark .text-gray-700 { color: #cccccc; }
+html.dark .text-gray-600 { color: #bbbbbb; }
+html.dark .text-gray-500 { color: #999999; }
+html.dark .text-gray-400 { color: #777777; }
+
+html.dark .border-gray-200 { border-color: #2d2d2d; }
+html.dark .border-gray-100 { border-color: #242424; }
+
+/* Inputs & selects */
+html.dark input:not([type='range']),
+html.dark textarea,
+html.dark select {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border-color: #2d2d2d;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #555555;
+}
