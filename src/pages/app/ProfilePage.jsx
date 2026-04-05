@@ -400,6 +400,94 @@ function PhotoTimeline({ entries, onDelete }) {
 }
 
 // =============================================
+// AVATAR UPLOAD COMPONENT
+// =============================================
+function AvatarUpload({ value, onChange, userId }) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+  const [showUrl, setShowUrl] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
+  const [imgBroken, setImgBroken] = useState(false)
+  const fileRef = useRef(null)
+
+  const upload = async (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setUploadError('Please select an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be under 5 MB.'); return }
+    setUploading(true); setUploadError('')
+    try {
+      const ext = file.name.split('.').pop().toLowerCase() || 'jpg'
+      const path = `${userId}/avatar.${ext}`
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      setImgBroken(false)
+      onChange(publicUrl + '?t=' + Date.now())
+    } catch (err) {
+      setUploadError(err.message?.includes('Bucket') ? 'Storage not configured. Use URL option below.' : (err.message || 'Upload failed.'))
+    } finally { setUploading(false) }
+  }
+
+  const onFileChange = (e) => { const f = e.target.files?.[0]; if (f) upload(f) }
+  const onDrop = (e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f) }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {/* Avatar circle — click or drop */}
+      <div
+        className={`relative w-24 h-24 rounded-full cursor-pointer group transition-all ${dragOver ? 'ring-4 ring-accent ring-offset-2' : ''}`}
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+      >
+        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border bg-surface flex items-center justify-center text-4xl select-none">
+          {value && !imgBroken
+            ? <img src={value} alt="avatar" className="w-full h-full object-cover" onError={() => setImgBroken(true)} />
+            : <span>👤</span>
+          }
+        </div>
+        {/* Hover / uploading overlay */}
+        <div className={`absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center gap-1 transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          {uploading
+            ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            : <><span className="text-white text-xl">📷</span><span className="text-white text-[10px] font-semibold">Change</span></>
+          }
+        </div>
+      </div>
+
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+
+      <div className="text-center space-y-0.5">
+        <p className="text-xs text-muted">Click or drag & drop a photo</p>
+        <p className="text-xs text-dim">JPG, PNG, GIF, WebP · max 5 MB</p>
+      </div>
+
+      {/* URL fallback */}
+      <button type="button" onClick={() => { setShowUrl(v => !v); setUrlInput(value || '') }}
+        className="text-xs text-dim hover:text-accent underline underline-offset-2 transition-colors">
+        {showUrl ? 'Hide URL input' : 'Or paste an image URL'}
+      </button>
+      {showUrl && (
+        <div className="w-full flex gap-2">
+          <input type="url" value={urlInput} onChange={e => setUrlInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { setImgBroken(false); onChange(urlInput); setShowUrl(false) } }}
+            placeholder="https://example.com/photo.jpg"
+            className="flex-1 bg-surface border border-border rounded-xl px-3 py-2 text-dark text-xs focus:outline-none focus:border-red-400" />
+          <button type="button" onClick={() => { setImgBroken(false); onChange(urlInput); setShowUrl(false) }}
+            className="px-3 py-2 bg-accent text-white rounded-xl text-xs font-bold hover:bg-accent-hover transition-colors">
+            Apply
+          </button>
+        </div>
+      )}
+
+      {uploadError && <p className="text-xs text-red-500 text-center">{uploadError}</p>}
+    </div>
+  )
+}
+
+// =============================================
 // MAIN COMPONENT
 // =============================================
 export default function ProfilePage() {
@@ -540,7 +628,7 @@ export default function ProfilePage() {
 
             {editMode ? (
               <div className="space-y-4">
-                <div><label className="block text-sm text-muted mb-2">Avatar URL</label><div className="flex gap-3 items-center"><div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">{avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}</div><input type="url" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div></div>
+                <AvatarUpload value={avatarUrl} onChange={setAvatarUrl} userId={user?.id} />
                 <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
                 <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
                 <div className="flex gap-3">
