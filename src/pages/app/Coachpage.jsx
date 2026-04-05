@@ -70,6 +70,7 @@ export default function CoachPage() {
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const bottomRef = useRef(null)
 
+  const [showInfo, setShowInfo] = useState(false)
   const coachName = localStorage.getItem(COACH_NAME_KEY) || 'Gainly Coach'
 
   useEffect(() => {
@@ -136,7 +137,27 @@ export default function CoachPage() {
         </div>
 
         {/* Chat window */}
-        <div className="flex-1 bg-white border border-border rounded-xl flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 bg-white border border-border rounded-xl flex flex-col overflow-hidden min-h-0 relative">
+
+          {/* Info button + disclaimer popover */}
+          <div className="absolute top-3 right-3 z-10">
+            <button
+              onClick={() => setShowInfo(v => !v)}
+              title="AI disclaimer"
+              className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
+                showInfo ? 'bg-surface border-muted text-dark' : 'border-border text-dim hover:text-muted hover:border-muted'
+              }`}
+            >
+              i
+            </button>
+            {showInfo && (
+              <div className="absolute right-0 top-full mt-1.5 w-72 bg-surface border border-border rounded-xl shadow-xl p-3 text-xs text-dim leading-relaxed">
+                <strong className="font-medium text-muted">{coachName}</strong> is an AI assistant, not a licensed doctor.
+                Responses about injuries or health conditions are{' '}
+                <strong className="font-medium text-muted">not medical advice</strong> — always consult a professional for health concerns.
+              </div>
+            )}
+          </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-3">
@@ -204,15 +225,6 @@ export default function CoachPage() {
               {error}
             </div>
           )}
-
-          {/* AI disclaimer reminder */}
-          <div className="mx-4 mb-2 px-3 py-2 flex items-start gap-2 bg-light rounded-lg border border-border">
-            <span className="text-dim text-sm flex-shrink-0 mt-px">ℹ️</span>
-            <p className="text-xs text-dim leading-relaxed">
-              {coachName} is an AI assistant, not a licensed doctor. Responses about injuries or health conditions
-              are <strong className="font-medium text-muted">not medical advice</strong> — always consult a professional for health concerns.
-            </p>
-          </div>
 
           {/* Input bar */}
           <form onSubmit={sendMessage} className="border-t border-border p-4 flex gap-3 flex-shrink-0">
