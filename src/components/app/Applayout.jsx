@@ -19,6 +19,153 @@ const THEMES = [
   { id: 'classic-dark', label: 'Classic Dark' },
 ]
 
+const PLANS = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: '/ month',
+    current: true,
+    cta: 'Current plan',
+    features: [
+      'Workout tracking & logging',
+      'Basic XP & leaderboards',
+      '3 custom workouts',
+      'Community access',
+      'AI Coach (10 messages/day)',
+      '1 GB file storage',
+    ],
+    note: 'Free forever',
+  },
+  {
+    name: 'Pro',
+    price: '$9.99',
+    period: '/ month',
+    highlight: true,
+    cta: 'Upgrade to Pro',
+    features: [
+      'Everything in Free',
+      'Unlimited custom workouts',
+      'Unlimited AI Coach',
+      'Progress photos & timeline',
+      'Advanced analytics',
+      'Data export (JSON & CSV)',
+      '10 GB file storage',
+      'Priority support',
+    ],
+    note: 'Coming soon',
+  },
+  {
+    name: 'Team',
+    price: '$24.99',
+    period: '/ month',
+    cta: 'Upgrade to Team',
+    features: [
+      'Everything in Pro',
+      'Team challenges',
+      'Group leaderboards',
+      'Coach dashboard',
+      'Shared workout library',
+      'Advanced team analytics',
+      'SSO support',
+      '24/7 priority support',
+    ],
+    note: 'Coming soon',
+  },
+]
+
+// ─── Upgrade Modal ────────────────────────────────────────────
+function UpgradeModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+          <div>
+            <h2 className="text-xl font-black text-dark">Upgrade Gainly</h2>
+            <p className="text-sm text-muted mt-0.5">Unlock the full potential of your training</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:bg-light hover:text-dark transition-colors text-lg">✕</button>
+        </div>
+
+        {/* Plans */}
+        <div className="grid grid-cols-3 gap-0 divide-x divide-border">
+          {PLANS.map(plan => (
+            <div key={plan.name} className={`p-6 flex flex-col ${plan.highlight ? 'bg-light' : ''}`}>
+              <div className="mb-4">
+                <div className="flex items-baseline gap-1 mb-0.5">
+                  <span className="text-2xl font-black text-dark">{plan.price}</span>
+                  <span className="text-sm text-muted">{plan.period}</span>
+                </div>
+                {plan.current && (
+                  <span className="text-xs text-dim border border-border rounded-full px-2 py-0.5">Current plan</span>
+                )}
+              </div>
+
+              <button
+                disabled={plan.current}
+                className={`w-full py-2.5 rounded-xl text-sm font-bold mb-5 transition-all ${
+                  plan.highlight
+                    ? 'bg-accent text-white hover:bg-accent-hover'
+                    : plan.current
+                      ? 'bg-surface border border-border text-muted cursor-default'
+                      : 'border border-border text-dark hover:bg-light'
+                }`}
+              >
+                {plan.cta}
+              </button>
+
+              <ul className="space-y-2.5 flex-1">
+                {plan.features.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-muted">
+                    <span className="text-accent mt-0.5 flex-shrink-0">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {plan.note && (
+                <p className="text-xs text-dim mt-4 pt-4 border-t border-border">{plan.note}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Search Overlay ───────────────────────────────────────────
+function SearchOverlay({ onClose }) {
+  const inputRef = useRef(null)
+  useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          <span className="text-muted text-lg">🔍</span>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search workouts, exercises, settings…"
+            className="flex-1 bg-transparent text-dark text-sm focus:outline-none placeholder:text-dim"
+          />
+          <kbd className="text-[10px] text-dim border border-border rounded px-1.5 py-0.5">ESC</kbd>
+        </div>
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-dim">Start typing to search…</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
 function getInitials(user, profile) {
   if (profile?.full_name) return profile.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (user?.email) return user.email[0].toUpperCase()
@@ -31,7 +178,6 @@ function applyTheme(theme) {
   if (theme === 'dark') html.classList.add('dark')
   else if (theme === 'classic-dark') html.classList.add('classic-dark')
   localStorage.setItem('gainly_theme', theme)
-  // keep legacy dark_mode key in sync for SettingsPage toggle
   if (theme !== 'light') localStorage.setItem('gainly_dark', '1')
   else localStorage.removeItem('gainly_dark')
 }
@@ -40,26 +186,27 @@ function getStoredTheme() {
   return localStorage.getItem('gainly_theme') || 'light'
 }
 
+// ─── Main Layout ──────────────────────────────────────────────
 export default function AppLayout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [profile, setProfile] = useState(null)
+  const [profile, setProfile]           = useState(null)
   const [sidebarHovered, setSidebarHovered] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [theme, setTheme] = useState(getStoredTheme)
+  const [profileOpen, setProfileOpen]   = useState(false)
+  const [theme, setTheme]               = useState(getStoredTheme)
+  const [showUpgrade, setShowUpgrade]   = useState(false)
+  const [showSearch, setShowSearch]     = useState(false)
   const profileRef = useRef(null)
 
-  // Apply theme on mount, then sync dark_mode boolean from Supabase
+  // Apply theme on mount + sync from Supabase
   useEffect(() => {
     applyTheme(theme)
     if (user) {
       supabase.from('user_settings').select('dark_mode').eq('id', user.id).single()
         .then(({ data }) => {
-          // Only override if user has no stored theme preference
           if (!localStorage.getItem('gainly_theme')) {
             const t = data?.dark_mode ? 'dark' : 'light'
-            setTheme(t)
-            applyTheme(t)
+            setTheme(t); applyTheme(t)
           }
         })
     }
@@ -72,6 +219,7 @@ export default function AppLayout() {
     }
   }, [user])
 
+  // Close profile dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false)
@@ -80,22 +228,28 @@ export default function AppLayout() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // ⌘K / Ctrl+K opens search
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setShowSearch(true) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const handleSignOut = async () => { await signOut(); navigate('/') }
 
   const handleThemeSelect = async (t) => {
-    setTheme(t)
-    applyTheme(t)
-    setProfileOpen(false)
-    if (user) {
-      await supabase.from('user_settings').update({ dark_mode: t !== 'light' }).eq('id', user.id)
-    }
+    setTheme(t); applyTheme(t); setProfileOpen(false)
+    if (user) await supabase.from('user_settings').update({ dark_mode: t !== 'light' }).eq('id', user.id)
   }
 
   const expanded = sidebarHovered
 
   return (
     <div className="min-h-screen bg-light flex">
-      {/* Sidebar */}
+
+      {/* ── Sidebar ── */}
       <aside
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
@@ -105,22 +259,14 @@ export default function AppLayout() {
       >
         <div className="p-4 flex items-center gap-2 h-[64px] flex-shrink-0">
           <NavLink to="/app" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">
-              G
-            </div>
-            <span className={`font-black text-dark text-lg whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0'}`}>
-              Gainly
-            </span>
+            <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">G</div>
+            <span className={`font-black text-dark text-lg whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0'}`}>Gainly</span>
           </NavLink>
         </div>
 
         <nav className="flex-1 px-3 py-2 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.end}
-              title={!expanded ? item.label : undefined}
+          {NAV_ITEMS.map(item => (
+            <NavLink key={item.path} to={item.path} end={item.end} title={!expanded ? item.label : undefined}
               className={({ isActive }) =>
                 `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                   isActive
@@ -130,9 +276,7 @@ export default function AppLayout() {
               }
             >
               <span className="text-lg flex-shrink-0 w-6 text-center">{item.icon}</span>
-              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-                {item.label}
-              </span>
+              <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>{item.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -141,14 +285,12 @@ export default function AppLayout() {
           {profile && (
             <div className="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg overflow-hidden border border-border">
               <span className="text-xs flex-shrink-0">⚡</span>
-              <span className={`text-red-600 text-sm font-bold whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+              <span className={`text-dark text-sm font-bold whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
                 {profile.xp_total || 0} XP
               </span>
             </div>
           )}
-          <NavLink
-            to="/app/settings"
-            title={!expanded ? 'Settings' : undefined}
+          <NavLink to="/app/settings" title={!expanded ? 'Settings' : undefined}
             className={({ isActive }) =>
               `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                 isActive ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
@@ -158,9 +300,7 @@ export default function AppLayout() {
             <span className="text-lg flex-shrink-0 w-6 text-center">⚙️</span>
             <span className={`whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>Settings</span>
           </NavLink>
-          <button
-            onClick={handleSignOut}
-            title={!expanded ? 'Sign Out' : undefined}
+          <button onClick={handleSignOut} title={!expanded ? 'Sign Out' : undefined}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted hover:bg-red-50 hover:text-red-500 transition-all"
           >
             <span className="text-lg flex-shrink-0 w-6 text-center">🚪</span>
@@ -169,10 +309,53 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <main className="flex-1 ml-[72px] min-h-screen flex flex-col">
-        <header className="h-[64px] flex items-center justify-end px-8 flex-shrink-0">
-          <div className="relative" ref={profileRef}>
+
+        {/* Top bar */}
+        <header className="h-[64px] flex items-center justify-end gap-2 px-6 flex-shrink-0 border-b border-border">
+
+          {/* Feedback */}
+          <button className="text-sm text-muted hover:text-dark transition-colors px-2 py-1 rounded-lg hover:bg-surface">
+            Feedback
+          </button>
+
+          {/* Search */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted hover:text-dark hover:border-muted transition-all text-sm"
+          >
+            <span className="text-base leading-none">🔍</span>
+            <span className="text-sm hidden sm:inline">Search…</span>
+            <kbd className="hidden sm:inline text-[10px] border border-border rounded px-1 py-0.5 leading-none">⌘K</kbd>
+          </button>
+
+          {/* Help */}
+          <button
+            title="Help"
+            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted hover:text-dark hover:border-muted transition-all text-sm font-bold"
+          >
+            ?
+          </button>
+
+          {/* Tips */}
+          <button
+            title="Tips & tricks"
+            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted hover:text-dark hover:border-muted transition-all text-base"
+          >
+            💡
+          </button>
+
+          {/* Upgrade to Pro */}
+          <button
+            onClick={() => setShowUpgrade(true)}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-bold hover:bg-accent-hover transition-colors"
+          >
+            Upgrade to Pro
+          </button>
+
+          {/* Profile */}
+          <div className="relative ml-1" ref={profileRef}>
             <button
               onClick={() => setProfileOpen(prev => !prev)}
               className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm hover:ring-2 hover:ring-red-300 transition-all overflow-hidden"
@@ -185,31 +368,21 @@ export default function AppLayout() {
 
             {profileOpen && (
               <div className="absolute right-0 top-11 w-60 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
-                {/* User info */}
                 <div className="px-4 py-3 border-b border-border">
                   <p className="text-sm font-bold text-dark truncate">
                     {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-dim truncate">{user?.email}</p>
                 </div>
-
-                {/* Profile link */}
-                <NavLink
-                  to="/app/profile"
-                  onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-light hover:text-dark transition-colors"
-                >
+                <NavLink to="/app/profile" onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-light hover:text-dark transition-colors">
                   <span>👤</span> Profile Settings
                 </NavLink>
-
-                {/* Theme */}
                 <div className="px-4 pt-2 pb-3 border-t border-border">
                   <p className="text-xs font-semibold text-dim mb-1.5">Theme</p>
                   <div className="space-y-0.5">
                     {THEMES.map(({ id, label }) => (
-                      <button
-                        key={id}
-                        onClick={() => handleThemeSelect(id)}
+                      <button key={id} onClick={() => handleThemeSelect(id)}
                         className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors ${
                           theme === id ? 'text-dark font-semibold' : 'text-muted hover:bg-light'
                         }`}
@@ -222,13 +395,9 @@ export default function AppLayout() {
                     ))}
                   </div>
                 </div>
-
-                {/* Sign out */}
                 <div className="border-t border-border">
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-red-50 hover:text-red-500 transition-colors"
-                  >
+                  <button onClick={handleSignOut}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-red-50 hover:text-red-500 transition-colors">
                     <span>🚪</span> Sign out
                   </button>
                 </div>
@@ -237,10 +406,15 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <div className="flex-1 px-8 pb-8">
+        {/* Page content */}
+        <div className="flex-1 px-8 pb-8 pt-8">
           <Outlet />
         </div>
       </main>
+
+      {/* ── Modals ── */}
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showSearch  && <SearchOverlay onClose={() => setShowSearch(false)} />}
 
       <DailyGoalPopup />
     </div>
