@@ -332,22 +332,22 @@ function FeedbackPopover({ initialView = 'choose', onClose }) {
                 </button>
 
                 {imgMenuOpen && (
-                  <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-10">
+                  <div className="absolute right-0 top-full mt-1.5 w-48 bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-10">
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-light transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-dark hover:bg-light transition-colors"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                       </svg>
                       Upload screenshot
                     </button>
                     <button
                       onClick={handleCapture}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-light transition-colors border-t border-border"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-dark hover:bg-light transition-colors border-t border-border"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
                       </svg>
                       Capture screenshot
