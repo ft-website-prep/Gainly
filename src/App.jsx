@@ -8,14 +8,14 @@ import RegisterPage from './pages/RegisterPage'
 import WelcomePage from './pages/WelcomePage'
 
 // App Layout (Sidebar)
-import AppLayout from './components/app/AppLayout'
+import AppLayout from './components/app/Applayout'
 
 // App Seiten (innerhalb der Sidebar)
 import Dashboard from './pages/app/Dashboard'
 import WorkoutsPage from './pages/app/WorkoutsPage'
 import CommunityPage from './pages/app/CommunityPage'
 import ProgressPage from './pages/app/ProgressPage'
-import CoachPage from './pages/app/CoachPage'
+import CoachPage from './pages/app/Coachpage'
 import ProfilePage from './pages/app/ProfilePage'
 import SettingsPage from './pages/app/SettingsPage'
 import LeaderboardsPage from './pages/app/LeaderboardsPage'
