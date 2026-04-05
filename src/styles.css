@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================================
-   Gainly Design Tokens — Light Mode (default)
+   Gainly Design Tokens — Light (default)
    ============================================================ */
 :root {
   --color-dark:        #0a0a0a;
@@ -16,53 +16,65 @@
 }
 
 /* ============================================================
-   Dark Mode Token Overrides
+   Dark — near-black, deep contrast (like Supabase "Dark")
    ============================================================ */
 html.dark {
-  --color-dark:        #f0f0f0;
-  --color-light:       #181818;
-  --color-surface:     #121212;
-  --color-border:      #2d2d2d;
-  --color-muted:       #999999;
+  --color-dark:        #ededed;
+  --color-light:       #0f0f0f;
+  --color-surface:     #141414;
+  --color-border:      #262626;
+  --color-muted:       #9a9a9a;
   --color-dim:         #555555;
   --color-accent-soft: #2d0000;
 }
 
-html.dark body {
-  background-color: #181818;
-  color: #f0f0f0;
-}
-
-/* bg-white → surface in dark mode */
-html.dark .bg-white {
-  background-color: var(--color-surface);
-}
-
-/* Common Tailwind gray overrides */
-html.dark .bg-gray-50  { background-color: #1e1e1e; }
-html.dark .bg-gray-100 { background-color: #242424; }
-html.dark .bg-gray-200 { background-color: #2d2d2d; }
-
-html.dark .text-gray-900 { color: #f0f0f0; }
-html.dark .text-gray-800 { color: #dedede; }
-html.dark .text-gray-700 { color: #cccccc; }
-html.dark .text-gray-600 { color: #bbbbbb; }
-html.dark .text-gray-500 { color: #999999; }
-html.dark .text-gray-400 { color: #777777; }
-
-html.dark .border-gray-200 { border-color: #2d2d2d; }
-html.dark .border-gray-100 { border-color: #242424; }
-
-/* Inputs & selects */
+html.dark body                  { background-color: #0f0f0f; color: #ededed; }
+html.dark .bg-white             { background-color: #141414; }
+html.dark .bg-gray-50           { background-color: #1a1a1a; }
+html.dark .bg-gray-100          { background-color: #202020; }
+html.dark .bg-gray-200          { background-color: #262626; }
+html.dark .text-gray-900        { color: #ededed; }
+html.dark .text-gray-800        { color: #d8d8d8; }
+html.dark .text-gray-700        { color: #c0c0c0; }
+html.dark .text-gray-600        { color: #aaaaaa; }
+html.dark .text-gray-500        { color: #9a9a9a; }
+html.dark .text-gray-400        { color: #777777; }
+html.dark .border-gray-200      { border-color: #262626; }
+html.dark .border-gray-100      { border-color: #1e1e1e; }
 html.dark input:not([type='range']),
 html.dark textarea,
-html.dark select {
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-  border-color: #2d2d2d;
+html.dark select                { background-color: #1a1a1a; color: #ededed; border-color: #2d2d2d; }
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #555555; }
+
+/* ============================================================
+   Classic Dark — charcoal, softer dark (like Supabase "Classic Dark")
+   ============================================================ */
+html.classic-dark {
+  --color-dark:        #e0e0e0;
+  --color-light:       #1a1a1a;
+  --color-surface:     #222222;
+  --color-border:      #333333;
+  --color-muted:       #9a9a9a;
+  --color-dim:         #555555;
+  --color-accent-soft: #3d0000;
 }
 
-html.dark input::placeholder,
-html.dark textarea::placeholder {
-  color: #555555;
-}
+html.classic-dark body                  { background-color: #1a1a1a; color: #e0e0e0; }
+html.classic-dark .bg-white             { background-color: #222222; }
+html.classic-dark .bg-gray-50           { background-color: #272727; }
+html.classic-dark .bg-gray-100          { background-color: #2e2e2e; }
+html.classic-dark .bg-gray-200          { background-color: #363636; }
+html.classic-dark .text-gray-900        { color: #e0e0e0; }
+html.classic-dark .text-gray-800        { color: #cccccc; }
+html.classic-dark .text-gray-700        { color: #b8b8b8; }
+html.classic-dark .text-gray-600        { color: #aaaaaa; }
+html.classic-dark .text-gray-500        { color: #9a9a9a; }
+html.classic-dark .text-gray-400        { color: #777777; }
+html.classic-dark .border-gray-200      { border-color: #333333; }
+html.classic-dark .border-gray-100      { border-color: #2a2a2a; }
+html.classic-dark input:not([type='range']),
+html.classic-dark textarea,
+html.classic-dark select                { background-color: #272727; color: #e0e0e0; border-color: #3a3a3a; }
+html.classic-dark input::placeholder,
+html.classic-dark textarea::placeholder { color: #555555; }

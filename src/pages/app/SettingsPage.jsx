@@ -260,8 +260,24 @@ export default function SettingsPage() {
               <option value="de">Deutsch</option>
             </select>
           </SettingRow>
-          <SettingRow icon="🌙" label="Dark Mode" description="Switch to a dark theme">
-            <Toggle checked={settings?.dark_mode ?? false} onChange={val => save({ dark_mode: val })} />
+          <SettingRow icon="🌙" label="Theme" description="Light, Dark, or Classic Dark">
+            <select
+              value={localStorage.getItem('gainly_theme') || 'light'}
+              onChange={e => {
+                const t = e.target.value
+                localStorage.setItem('gainly_theme', t)
+                const html = document.documentElement
+                html.classList.remove('dark', 'classic-dark')
+                if (t === 'dark') html.classList.add('dark')
+                else if (t === 'classic-dark') html.classList.add('classic-dark')
+                save({ dark_mode: t !== 'light' })
+              }}
+              className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 cursor-pointer"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="classic-dark">Classic Dark</option>
+            </select>
           </SettingRow>
           <SettingRow icon="📏" label="Units" description="Weight and distance">
             <select value={settings?.units || 'metric'} onChange={e => save({ units: e.target.value })}
