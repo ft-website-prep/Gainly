@@ -1,8 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import CustomCursor from './components/app/CustomCursor'
-
 // Öffentliche Seiten
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -27,7 +25,6 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <CustomCursor />
         <Routes>
           {/* === Öffentliche Routen === */}
           <Route path="/" element={<LandingPage />} />

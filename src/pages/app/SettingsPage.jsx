@@ -217,6 +217,30 @@ export default function SettingsPage() {
 
         {/* APP SETTINGS */}
         <Section title="App Settings" icon="⚙️" color="green">
+          {/* AI Coach Name */}
+          <div className="py-4">
+            <div className="flex items-center gap-3.5 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-surface flex items-center justify-center text-lg flex-shrink-0">🤖</div>
+              <div>
+                <div className="text-sm font-semibold text-dark">AI Coach Name</div>
+                <div className="text-xs text-dim mt-0.5">Give your personal AI coach a name</div>
+              </div>
+            </div>
+            <div className="ml-[52px] flex gap-2">
+              <input
+                type="text"
+                defaultValue={localStorage.getItem('gainly_coach_name') || ''}
+                placeholder="Gainly Coach"
+                maxLength={30}
+                onBlur={e => {
+                  const val = e.target.value.trim()
+                  if (val) localStorage.setItem('gainly_coach_name', val)
+                  else localStorage.removeItem('gainly_coach_name')
+                }}
+                className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 w-full max-w-xs"
+              />
+            </div>
+          </div>
           <SettingRow icon="🌐" label="Language" description="Preferred language">
             <select value={settings?.language || 'en'} onChange={e => save({ language: e.target.value })}
               className="bg-surface border border-border rounded-xl px-4 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400 cursor-pointer">

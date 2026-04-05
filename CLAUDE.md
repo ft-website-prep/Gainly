@@ -41,7 +41,7 @@ No test or lint commands are configured.
 
 Tailwind CSS with a custom "Gainly Red" color palette (`tailwind.config.js`). Primary accent: `#e10600`. Custom tokens: `dark`, `light`, `surface`, `border`, `muted`, `dim`, `accent` variants. Animations via Framer Motion, GSAP, and Lenis (smooth scroll).
 
-**Cursor:** System cursor is visible. `CustomCursor.jsx` adds only a small 5px red trailing dot (40% opacity, lerp 0.1). No `cursor: none` in CSS.
+**Cursor:** Standard system cursor. `CustomCursor.jsx` exists but is no longer used (removed from App.jsx).
 
 ### Key Directories
 
