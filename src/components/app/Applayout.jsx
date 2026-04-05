@@ -165,7 +165,7 @@ function SearchOverlay({ onClose }) {
   )
 }
 
-// ─── Feedback Modal ───────────────────────────────────────────
+// ─── Feedback Popover ─────────────────────────────────────────
 const HELP_LINKS = [
   { icon: '📖', label: 'Docs',            href: '#', desc: 'Browse the Gainly documentation' },
   { icon: '🔧', label: 'Troubleshooting', href: '#', desc: 'Common issues and fixes' },
@@ -174,7 +174,7 @@ const HELP_LINKS = [
   { icon: '✉️', label: 'Contact Support', href: '#', desc: 'Send us a message' },
 ]
 
-function FeedbackModal({ initialView = 'choose', onClose }) {
+function FeedbackPopover({ initialView = 'choose', onClose }) {
   const [view, setView]     = useState(initialView) // 'choose' | 'issue' | 'idea' | 'help' | 'sent'
   const [text, setText]     = useState('')
   const textareaRef         = useRef(null)
@@ -192,7 +192,6 @@ function FeedbackModal({ initialView = 'choose', onClose }) {
   }, [onClose])
 
   const handleSend = () => {
-    // TODO: wire up to real feedback endpoint
     setText('')
     setView('sent')
     setTimeout(onClose, 1800)
@@ -204,116 +203,112 @@ function FeedbackModal({ initialView = 'choose', onClose }) {
     : 'My idea for improving Gainly is…'
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-surface border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ── Choose type ── */}
-        {view === 'choose' && (
-          <div className="p-6">
-            <h2 className="text-lg font-black text-dark mb-5">What would you like to share?</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setView('issue')}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-accent bg-light hover:bg-surface transition-all group"
-              >
-                <span className="text-3xl">⚠️</span>
-                <div className="text-center">
-                  <div className="font-bold text-dark text-base">Issue</div>
-                  <div className="text-xs text-muted mt-0.5">with the app</div>
-                </div>
-              </button>
-              <button
-                onClick={() => setView('idea')}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-accent bg-light hover:bg-surface transition-all group"
-              >
-                <span className="text-3xl">💡</span>
-                <div className="text-center">
-                  <div className="font-bold text-dark text-base">Idea</div>
-                  <div className="text-xs text-muted mt-0.5">to improve Gainly</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
+    <div className="absolute right-0 top-full mt-2 w-[360px] bg-surface border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
 
-        {/* ── Write feedback ── */}
-        {(view === 'issue' || view === 'idea') && (
-          <>
-            <div className="p-4">
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder={typePlaceholder}
-                rows={6}
-                className="w-full bg-light border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-accent resize-none placeholder:text-dim leading-relaxed"
-              />
-            </div>
-            <div className="flex items-center justify-between px-4 pb-4">
-              <button
-                onClick={() => setView('help')}
-                className="px-4 py-2 rounded-xl border border-border text-sm text-muted hover:text-dark hover:bg-light transition-colors"
-              >
-                Get help instead
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  title="Attach screenshot"
-                  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted hover:text-dark hover:bg-light transition-colors"
-                >
-                  🖼️
-                </button>
-                <button
-                  onClick={handleSend}
-                  disabled={!text.trim()}
-                  className="px-5 py-2 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Send {typeLabel}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Help ── */}
-        {view === 'help' && (
-          <div className="p-5">
-            <div className="mb-4">
-              <h2 className="text-base font-black text-dark">Need help with Gainly?</h2>
-              <p className="text-xs text-muted mt-0.5">Start with our docs or community.</p>
-            </div>
-            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border mb-4">
-              {HELP_LINKS.map(link => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="flex items-center gap-3 px-4 py-3 text-sm text-dark hover:bg-light transition-colors"
-                >
-                  <span className="text-base w-5 text-center flex-shrink-0">{link.icon}</span>
-                  <span className="font-medium">{link.label}</span>
-                </a>
-              ))}
-            </div>
+      {/* ── Choose type ── */}
+      {view === 'choose' && (
+        <div className="p-5">
+          <h2 className="text-base font-black text-dark mb-4">What would you like to share?</h2>
+          <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => setView('choose')}
-              className="px-4 py-2 rounded-xl border border-border text-sm text-muted hover:text-dark hover:bg-light transition-colors"
+              onClick={() => setView('issue')}
+              className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-border hover:border-accent bg-light hover:bg-surface transition-all"
             >
-              Leave feedback instead
+              <span className="text-3xl">⚠️</span>
+              <div className="text-center">
+                <div className="font-bold text-dark text-sm">Issue</div>
+                <div className="text-xs text-muted mt-0.5">with the app</div>
+              </div>
+            </button>
+            <button
+              onClick={() => setView('idea')}
+              className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-border hover:border-accent bg-light hover:bg-surface transition-all"
+            >
+              <span className="text-3xl">💡</span>
+              <div className="text-center">
+                <div className="font-bold text-dark text-sm">Idea</div>
+                <div className="text-xs text-muted mt-0.5">to improve Gainly</div>
+              </div>
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── Sent confirmation ── */}
-        {view === 'sent' && (
-          <div className="p-8 flex flex-col items-center text-center gap-3">
-            <span className="text-4xl">🙏</span>
-            <p className="font-black text-dark text-lg">Thanks for the feedback!</p>
-            <p className="text-sm text-muted">We'll use it to make Gainly better.</p>
+      {/* ── Write feedback ── */}
+      {(view === 'issue' || view === 'idea') && (
+        <>
+          <div className="p-4">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={typePlaceholder}
+              rows={5}
+              className="w-full bg-light border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-accent resize-none placeholder:text-dim leading-relaxed"
+            />
           </div>
-        )}
-      </div>
+          <div className="flex items-center justify-between px-4 pb-4">
+            <button
+              onClick={() => setView('help')}
+              className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted hover:text-dark hover:bg-light transition-colors"
+            >
+              Get help instead
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                title="Attach screenshot"
+                className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted hover:text-dark hover:bg-light transition-colors text-sm"
+              >
+                🖼️
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={!text.trim()}
+                className="px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-bold hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Send {typeLabel}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Help ── */}
+      {view === 'help' && (
+        <div className="p-4">
+          <div className="mb-3">
+            <h2 className="text-sm font-black text-dark">Need help with Gainly?</h2>
+            <p className="text-xs text-muted mt-0.5">Start with our docs or community.</p>
+          </div>
+          <div className="border border-border rounded-xl overflow-hidden divide-y divide-border mb-3">
+            {HELP_LINKS.map(link => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-dark hover:bg-light transition-colors"
+              >
+                <span className="text-sm w-5 text-center flex-shrink-0">{link.icon}</span>
+                <span className="font-medium">{link.label}</span>
+              </a>
+            ))}
+          </div>
+          <button
+            onClick={() => setView('choose')}
+            className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted hover:text-dark hover:bg-light transition-colors"
+          >
+            Leave feedback instead
+          </button>
+        </div>
+      )}
+
+      {/* ── Sent confirmation ── */}
+      {view === 'sent' && (
+        <div className="p-8 flex flex-col items-center text-center gap-3">
+          <span className="text-4xl">🙏</span>
+          <p className="font-black text-dark text-lg">Thanks for the feedback!</p>
+          <p className="text-sm text-muted">We'll use it to make Gainly better.</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -347,10 +342,10 @@ export default function AppLayout() {
   const [sidebarHovered, setSidebarHovered] = useState(false)
   const [profileOpen, setProfileOpen]   = useState(false)
   const [theme, setTheme]               = useState(getStoredTheme)
-  const [showUpgrade, setShowUpgrade]   = useState(false)
   const [showSearch, setShowSearch]     = useState(false)
   const [feedbackView, setFeedbackView] = useState(null) // null | 'choose' | 'help'
-  const profileRef = useRef(null)
+  const profileRef  = useRef(null)
+  const feedbackRef = useRef(null)
 
   // Apply theme on mount + sync from Supabase
   useEffect(() => {
@@ -377,6 +372,7 @@ export default function AppLayout() {
   useEffect(() => {
     const handler = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false)
+      if (feedbackRef.current && !feedbackRef.current.contains(e.target)) setFeedbackView(null)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -469,32 +465,37 @@ export default function AppLayout() {
         {/* Top bar */}
         <header className="h-[64px] flex items-center justify-end gap-2 px-6 flex-shrink-0 border-b border-border">
 
-          {/* Feedback */}
-          <button
-            onClick={() => setFeedbackView('choose')}
-            className="text-sm text-muted hover:text-dark transition-colors px-2 py-1 rounded-lg hover:bg-surface"
-          >
-            Feedback
-          </button>
+          {/* Feedback + Help (shared popover anchor) */}
+          <div className="relative flex items-center gap-2" ref={feedbackRef}>
+            <button
+              onClick={() => setFeedbackView(v => v === 'choose' || v === 'issue' || v === 'idea' || v === 'sent' ? null : 'choose')}
+              className="text-sm text-muted hover:text-dark transition-colors px-2 py-1 rounded-lg hover:bg-surface"
+            >
+              Feedback
+            </button>
 
-          {/* Search */}
-          <button
-            onClick={() => setShowSearch(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted hover:text-dark hover:border-muted transition-all text-sm"
-          >
-            <span className="text-base leading-none">🔍</span>
-            <span className="text-sm hidden sm:inline">Search…</span>
-            <kbd className="hidden sm:inline text-[10px] border border-border rounded px-1 py-0.5 leading-none">⌘K</kbd>
-          </button>
+            {/* Search */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-muted hover:text-dark hover:border-muted transition-all text-sm"
+            >
+              <span className="text-base leading-none">🔍</span>
+              <span className="text-sm hidden sm:inline">Search…</span>
+              <kbd className="hidden sm:inline text-[10px] border border-border rounded px-1 py-0.5 leading-none">⌘K</kbd>
+            </button>
 
-          {/* Help */}
-          <button
-            title="Help"
-            onClick={() => setFeedbackView('help')}
-            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted hover:text-dark hover:border-muted transition-all text-sm font-bold"
-          >
-            ?
-          </button>
+            <button
+              title="Help"
+              onClick={() => setFeedbackView(v => v === 'help' ? null : 'help')}
+              className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted hover:text-dark hover:border-muted transition-all text-sm font-bold"
+            >
+              ?
+            </button>
+
+            {feedbackView && (
+              <FeedbackPopover key={feedbackView} initialView={feedbackView} onClose={() => setFeedbackView(null)} />
+            )}
+          </div>
 
           {/* Tips */}
           <button
@@ -506,7 +507,6 @@ export default function AppLayout() {
 
           {/* Upgrade to Pro */}
           <button
-            onClick={() => setShowUpgrade(true)}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent text-white text-sm font-bold hover:bg-accent-hover transition-colors"
           >
             Upgrade to Pro
@@ -571,9 +571,7 @@ export default function AppLayout() {
       </main>
 
       {/* ── Modals ── */}
-      {showUpgrade  && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
-      {showSearch   && <SearchOverlay onClose={() => setShowSearch(false)} />}
-      {feedbackView && <FeedbackModal initialView={feedbackView} onClose={() => setFeedbackView(null)} />}
+      {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
 
       <DailyGoalPopup />
     </div>
