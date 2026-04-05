@@ -175,9 +175,13 @@ const HELP_LINKS = [
 ]
 
 function FeedbackPopover({ initialView = 'choose', onClose }) {
-  const [view, setView]     = useState(initialView) // 'choose' | 'issue' | 'idea' | 'help' | 'sent'
-  const [text, setText]     = useState('')
-  const textareaRef         = useRef(null)
+  const [view, setView]           = useState(initialView)
+  const [text, setText]           = useState('')
+  const [screenshot, setScreenshot] = useState(null) // { dataUrl, name }
+  const [imgMenuOpen, setImgMenuOpen] = useState(false)
+  const textareaRef  = useRef(null)
+  const fileInputRef = useRef(null)
+  const imgMenuRef   = useRef(null)
 
   useEffect(() => {
     if ((view === 'issue' || view === 'idea') && textareaRef.current) {
@@ -191,8 +195,46 @@ function FeedbackPopover({ initialView = 'choose', onClose }) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // Close img menu on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (imgMenuRef.current && !imgMenuRef.current.contains(e.target)) setImgMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setScreenshot({ dataUrl: ev.target.result, name: file.name })
+    reader.readAsDataURL(file)
+    setImgMenuOpen(false)
+    e.target.value = ''
+  }
+
+  const handleCapture = async () => {
+    setImgMenuOpen(false)
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+      const video = document.createElement('video')
+      video.srcObject = stream
+      await video.play()
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      canvas.getContext('2d').drawImage(video, 0, 0)
+      stream.getTracks().forEach(t => t.stop())
+      setScreenshot({ dataUrl: canvas.toDataURL('image/png'), name: 'screenshot.png' })
+    } catch {
+      // user cancelled or permission denied — silently ignore
+    }
+  }
+
   const handleSend = () => {
     setText('')
+    setScreenshot(null)
     setView('sent')
     setTimeout(onClose, 1800)
   }
@@ -237,7 +279,7 @@ function FeedbackPopover({ initialView = 'choose', onClose }) {
       {/* ── Write feedback ── */}
       {(view === 'issue' || view === 'idea') && (
         <>
-          <div className="p-4">
+          <div className="p-4 pb-3">
             <textarea
               ref={textareaRef}
               value={text}
@@ -246,7 +288,25 @@ function FeedbackPopover({ initialView = 'choose', onClose }) {
               rows={5}
               className="w-full bg-light border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-accent resize-none placeholder:text-dim leading-relaxed"
             />
+
+            {/* Screenshot preview */}
+            {screenshot && (
+              <div className="mt-2 relative group w-fit">
+                <img
+                  src={screenshot.dataUrl}
+                  alt="screenshot"
+                  className="h-16 rounded-lg border border-border object-cover"
+                />
+                <button
+                  onClick={() => setScreenshot(null)}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-dark text-surface text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="flex items-center justify-between px-4 pb-4">
             <button
               onClick={() => setView('help')}
@@ -255,12 +315,47 @@ function FeedbackPopover({ initialView = 'choose', onClose }) {
               Get help instead
             </button>
             <div className="flex items-center gap-2">
-              <button
-                title="Attach screenshot"
-                className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted hover:text-dark hover:bg-light transition-colors text-sm"
-              >
-                🖼️
-              </button>
+              {/* Screenshot button + dropdown */}
+              <div className="relative" ref={imgMenuRef}>
+                <button
+                  title="Attach screenshot"
+                  onClick={() => setImgMenuOpen(v => !v)}
+                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors text-sm ${
+                    screenshot
+                      ? 'border-accent text-accent bg-accent/10'
+                      : 'border-border text-muted hover:text-dark hover:bg-light'
+                  }`}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </button>
+
+                {imgMenuOpen && (
+                  <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-surface border border-border rounded-xl shadow-xl overflow-hidden z-10">
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-light transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Upload screenshot
+                    </button>
+                    <button
+                      onClick={handleCapture}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-dark hover:bg-light transition-colors border-t border-border"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                      </svg>
+                      Capture screenshot
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleSend}
                 disabled={!text.trim()}
