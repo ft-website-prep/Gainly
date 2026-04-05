@@ -124,7 +124,7 @@ export default function AppLayout() {
               className={({ isActive }) =>
                 `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
                   isActive
-                    ? 'bg-red-50 text-red-600 border border-red-200 font-semibold'
+                    ? 'bg-surface border border-border text-dark font-semibold'
                     : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
                 }`
               }
@@ -139,7 +139,7 @@ export default function AppLayout() {
 
         <div className="p-3 border-t border-border space-y-1">
           {profile && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg overflow-hidden border border-border">
               <span className="text-xs flex-shrink-0">⚡</span>
               <span className={`text-red-600 text-sm font-bold whitespace-nowrap transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
                 {profile.xp_total || 0} XP
@@ -151,7 +151,7 @@ export default function AppLayout() {
             title={!expanded ? 'Settings' : undefined}
             className={({ isActive }) =>
               `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                isActive ? 'bg-red-50 text-red-600 border border-red-200' : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
+                isActive ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
               }`
             }
           >
