@@ -184,7 +184,7 @@ export default function AppLayout() {
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-11 w-56 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-11 w-60 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
                 {/* User info */}
                 <div className="px-4 py-3 border-b border-border">
                   <p className="text-sm font-bold text-dark truncate">
