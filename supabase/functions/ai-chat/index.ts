@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       { data: conversationHistory },
       { data: weightHistory },
       { data: recentExerciseLogs },
+      { data: yearCategoryLogs },
     ] = await Promise.all([
 
       // Profil: Level, Equipment, Streak, XP + Körperdaten
@@ -131,9 +132,43 @@ Deno.serve(async (req) => {
         .order("logged_at", { ascending: true })
         .limit(500),
 
+      // 12-Monats-Kategorie-Heatmap: nur Datum + Kategorie (sehr günstig)
+      supabaseAdmin
+        .from("exercise_logs")
+        .select("logged_at, exercises(category)")
+        .eq("user_id", user.id)
+        .gte("logged_at", new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
+        .order("logged_at", { ascending: true })
+        .limit(2000),
+
     ]);
 
     // --- 6. SYSTEM PROMPT BAUEN ---
+
+    // 12-Monats-Kategorie-Heatmap: pro Monat zählen wie viele Sets pro Muskelgruppe
+    const yearFocusSummary = (() => {
+      const logs = (yearCategoryLogs || []) as any[];
+      if (!logs.length) return "No training data in the last 12 months.";
+
+      const byMonth: Record<string, Record<string, number>> = {};
+      for (const log of logs) {
+        const month = new Date(log.logged_at).toISOString().slice(0, 7); // "2025-01"
+        const cat = log.exercises?.category || "other";
+        if (!byMonth[month]) byMonth[month] = {};
+        byMonth[month][cat] = (byMonth[month][cat] || 0) + 1;
+      }
+
+      return Object.entries(byMonth)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, cats]) => {
+          const sorted = Object.entries(cats)
+            .sort(([, a], [, b]) => b - a)
+            .map(([c, n]) => `${c}:${n}`)
+            .join(" ");
+          return `${month}: ${sorted}`;
+        })
+        .join("\n");
+    })();
 
     // Workout-Historie als lesbaren Text formatieren
     const workoutSummary = ((recentWorkouts || []) as any[])
@@ -322,6 +357,9 @@ ${workoutSummary || "No recent workouts logged."}
 
 ## Exercise progression (last 90 days — first entry → latest entry per exercise)
 ${exerciseLogSummary}
+
+## 12-month training focus (sets per category per month)
+${yearFocusSummary}
 
 ## Skill progressions
 ${progressSummary || "No progression data yet."}
