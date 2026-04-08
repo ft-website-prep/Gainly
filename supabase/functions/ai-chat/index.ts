@@ -122,13 +122,14 @@ Deno.serve(async (req) => {
         .order("measured_at", { ascending: false })
         .limit(8),
 
-      // Tatsächlich geloggte Übungen (letzte 25 Einträge)
+      // Alle Übungs-Logs der letzten 90 Tage (für Progressionsanalyse)
       supabaseAdmin
         .from("exercise_logs")
         .select("logged_at, sets_completed, reps_completed, weight_used, duration_seconds, exercises(name, category)")
         .eq("user_id", user.id)
-        .order("logged_at", { ascending: false })
-        .limit(25),
+        .gte("logged_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+        .order("logged_at", { ascending: true })
+        .limit(500),
 
     ]);
 
@@ -176,24 +177,59 @@ Deno.serve(async (req) => {
       .reverse()
       .join("\n");
 
-    // Tatsächliche Übungs-Logs formatieren
+    // Übungs-Progressions-Analyse (90 Tage): pro Übung ersten + letzten Wert + Trend
     const exerciseLogSummary = (() => {
       const logs = (recentExerciseLogs || []) as any[];
-      if (!logs.length) return "No exercise logs yet.";
-      // Gruppieren nach Datum
-      const byDate: Record<string, string[]> = {};
+      if (!logs.length) return "No exercise logs in the last 90 days.";
+
+      // Pro Übung: alle Einträge sammeln (logs sind bereits ASC sortiert)
+      const byExercise: Record<string, { date: string; reps?: number; weight?: number; sets?: number; duration?: number }[]> = {};
       for (const log of logs) {
-        const date = new Date(log.logged_at).toLocaleDateString("en", { month: "short", day: "numeric" });
         const name = log.exercises?.name || "Unknown";
-        let detail = name;
-        if (log.sets_completed && log.reps_completed) detail += ` ${log.sets_completed}×${log.reps_completed}`;
-        if (log.weight_used) detail += ` @ ${log.weight_used} kg`;
-        if (log.duration_seconds) detail += ` (${log.duration_seconds}s)`;
-        if (!byDate[date]) byDate[date] = [];
-        byDate[date].push(detail);
+        if (!byExercise[name]) byExercise[name] = [];
+        byExercise[name].push({
+          date: new Date(log.logged_at).toLocaleDateString("en", { month: "short", day: "numeric" }),
+          reps: log.reps_completed ?? undefined,
+          weight: log.weight_used ?? undefined,
+          sets: log.sets_completed ?? undefined,
+          duration: log.duration_seconds ?? undefined,
+        });
       }
-      return Object.entries(byDate)
-        .map(([date, entries]) => `${date}: ${entries.join(", ")}`)
+
+      return Object.entries(byExercise)
+        .map(([name, entries]) => {
+          const first = entries[0];
+          const last = entries[entries.length - 1];
+          const sessions = entries.length;
+
+          const fmt = (e: typeof first) => {
+            const parts: string[] = [];
+            if (e.sets && e.reps) parts.push(`${e.sets}×${e.reps} reps`);
+            else if (e.reps) parts.push(`${e.reps} reps`);
+            if (e.weight) parts.push(`@ ${e.weight} kg`);
+            if (e.duration) parts.push(`${e.duration}s`);
+            return parts.join(" ") || "logged";
+          };
+
+          if (sessions === 1) {
+            return `- ${name}: ${fmt(first)} (${first.date}, 1 session)`;
+          }
+
+          // Delta berechnen
+          let delta = "";
+          if (first.weight && last.weight && last.weight !== first.weight) {
+            const diff = +(last.weight - first.weight).toFixed(1);
+            delta = ` [${diff > 0 ? "↑" : "↓"} ${Math.abs(diff)} kg]`;
+          } else if (first.reps && last.reps && last.reps !== first.reps) {
+            const diff = last.reps - first.reps;
+            delta = ` [${diff > 0 ? "↑" : "↓"} ${Math.abs(diff)} reps]`;
+          } else if (first.duration && last.duration && last.duration !== first.duration) {
+            const diff = last.duration - first.duration;
+            delta = ` [${diff > 0 ? "↑" : "↓"} ${Math.abs(diff)}s]`;
+          }
+
+          return `- ${name}: ${fmt(first)} (${first.date}) → ${fmt(last)} (${last.date}), ${sessions} sessions${delta}`;
+        })
         .join("\n");
     })();
 
@@ -284,7 +320,7 @@ ${weightSummary || "No weight entries logged."}
 ## Recent workout sessions
 ${workoutSummary || "No recent workouts logged."}
 
-## Recent exercise logs (actual sets/reps/weight)
+## Exercise progression (last 90 days — first entry → latest entry per exercise)
 ${exerciseLogSummary}
 
 ## Skill progressions
