@@ -4,6 +4,105 @@ import { supabase } from '../../lib/supabaseClient'
 const DISCLAIMER_KEY = 'gainly_coach_disclaimer_seen'
 const COACH_NAME_KEY = 'gainly_coach_name'
 
+// --- Markdown renderer (no external lib) ---
+function renderMarkdown(text) {
+  const boldParts = (str) => {
+    const parts = str.split(/\*\*(.*?)\*\*/g)
+    return parts.map((part, i) =>
+      i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+    )
+  }
+
+  const lines = text.split('\n')
+  const elements = []
+  let listItems = []
+  let listType = null
+
+  const flushList = (key) => {
+    if (!listItems.length) return
+    if (listType === 'ol') {
+      elements.push(
+        <ol key={`ol-${key}`} className="list-decimal ml-5 space-y-0.5 my-1">
+          {listItems}
+        </ol>
+      )
+    } else {
+      elements.push(
+        <ul key={`ul-${key}`} className="list-disc ml-5 space-y-0.5 my-1">
+          {listItems}
+        </ul>
+      )
+    }
+    listItems = []
+    listType = null
+  }
+
+  lines.forEach((line, i) => {
+    const bulletMatch = line.match(/^[-•]\s(.*)/)
+    const numberedMatch = line.match(/^\d+\.\s(.*)/)
+    const headingMatch = line.match(/^###?\s(.*)/)
+
+    if (bulletMatch) {
+      if (listType === 'ol') flushList(i)
+      listType = 'ul'
+      listItems.push(<li key={i}>{boldParts(bulletMatch[1])}</li>)
+    } else if (numberedMatch) {
+      if (listType === 'ul') flushList(i)
+      listType = 'ol'
+      listItems.push(<li key={i}>{boldParts(numberedMatch[1])}</li>)
+    } else if (headingMatch) {
+      flushList(i)
+      elements.push(
+        <p key={i} className="font-bold text-dark mt-2 mb-0.5">{boldParts(headingMatch[1])}</p>
+      )
+    } else if (!line.trim()) {
+      flushList(i)
+      elements.push(<br key={i} />)
+    } else {
+      flushList(i)
+      elements.push(<p key={i}>{boldParts(line)}</p>)
+    }
+  })
+
+  flushList('final')
+  return elements
+}
+
+// --- Off-topic detection ---
+const OFF_TOPIC_PREFIX = '[OFF_TOPIC]'
+
+function parseMessage(content) {
+  if (content.startsWith(OFF_TOPIC_PREFIX)) {
+    return { isOffTopic: true, text: content.slice(OFF_TOPIC_PREFIX.length) }
+  }
+  return { isOffTopic: false, text: content }
+}
+
+// --- Suggestion cards config ---
+const SUGGESTIONS = [
+  {
+    icon: '🗓️',
+    label: 'Plan my workout',
+    prompt: 'Can you plan a workout for me today based on my level and equipment?',
+  },
+  {
+    icon: '📊',
+    label: 'Analyze my progress',
+    prompt: 'How am I progressing based on my recent workouts? What should I focus on?',
+  },
+  {
+    icon: '🥗',
+    label: 'Nutrition advice',
+    prompt: 'What should I eat before and after training to maximize my results?',
+  },
+  {
+    icon: '💪',
+    label: 'Technique help',
+    prompt: 'Can you explain the proper form and common mistakes for pull-ups?',
+  },
+]
+
+// --- Disclaimer Modal ---
 function DisclaimerModal({ coachName, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -26,7 +125,7 @@ function DisclaimerModal({ coachName, onClose }) {
                 ['💪', 'Training recommendations & program planning'],
                 ['📈', 'Progress analysis & progression advice'],
                 ['🧘', 'Technique tips & exercise guidance'],
-                ['🥗', 'General nutrition pointers'],
+                ['🥗', 'Nutrition guidance for athletes'],
                 ['🔥', 'Motivation & workout ideas'],
               ].map(([icon, text]) => (
                 <li key={text} className="text-xs text-muted flex items-start gap-2">
@@ -61,6 +160,45 @@ function DisclaimerModal({ coachName, onClose }) {
   )
 }
 
+// --- Message bubble ---
+function MessageBubble({ msg }) {
+  const { isOffTopic, text } = parseMessage(msg.content)
+
+  if (msg.role === 'user') {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[75%] rounded-2xl rounded-br-none px-4 py-2.5 text-sm leading-relaxed bg-accent text-white">
+          {text}
+        </div>
+      </div>
+    )
+  }
+
+  if (isOffTopic) {
+    return (
+      <div className="flex justify-start items-start gap-2">
+        <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+          ⚠️
+        </div>
+        <div className="max-w-[75%] rounded-2xl rounded-bl-none px-4 py-2.5 text-sm leading-relaxed bg-amber-50 border border-amber-200 text-amber-800">
+          {text}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex justify-start items-start gap-2">
+      <div className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+        🤖
+      </div>
+      <div className="max-w-[75%] rounded-2xl rounded-bl-none px-4 py-2.5 text-sm leading-relaxed bg-light text-dark space-y-0.5">
+        {renderMarkdown(text)}
+      </div>
+    </div>
+  )
+}
+
 export default function CoachPage() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -89,7 +227,7 @@ export default function CoachPage() {
   }
 
   async function sendMessage(e) {
-    e.preventDefault()
+    e?.preventDefault()
     const text = input.trim()
     if (!text || loading) return
 
@@ -116,6 +254,29 @@ export default function CoachPage() {
     }
   }
 
+  function handleSuggestion(prompt) {
+    setInput(prompt)
+    // auto-send
+    setError(null)
+    setMessages(prev => [...prev, { role: 'user', content: prompt }])
+    setLoading(true)
+
+    supabase.functions.invoke('ai-chat', {
+      body: { message: prompt, conversation_id: conversationId },
+    }).then(({ data, error: fnError }) => {
+      if (fnError) throw new Error(fnError.message)
+      if (data?.error) throw new Error(data.error)
+      setConversationId(data.conversation_id)
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+    }).catch(err => {
+      setError(err.message || 'Something went wrong.')
+      setMessages(prev => prev.slice(0, -1))
+    }).finally(() => {
+      setLoading(false)
+      setInput('')
+    })
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -133,7 +294,7 @@ export default function CoachPage() {
         {/* Header */}
         <div className="mb-5 flex-shrink-0">
           <h1 className="text-3xl font-black text-dark">{coachName}</h1>
-          <p className="text-muted mt-1">Your personal training assistant</p>
+          <p className="text-muted mt-1">Your personal training assistant — fitness & health only</p>
         </div>
 
         {/* Chat window */}
@@ -152,9 +313,8 @@ export default function CoachPage() {
             </button>
             {showInfo && (
               <div className="absolute right-0 top-full mt-1.5 w-72 bg-surface border border-border rounded-xl shadow-xl p-3 text-xs text-dim leading-relaxed">
-                <strong className="font-medium text-muted">{coachName}</strong> is an AI assistant, not a licensed doctor.
-                Responses about injuries or health conditions are{' '}
-                <strong className="font-medium text-muted">not medical advice</strong> — always consult a professional for health concerns.
+                <strong className="font-medium text-muted">{coachName}</strong> is an AI assistant focused exclusively
+                on fitness, training, and health. Not a licensed doctor — always consult a professional for medical concerns.
               </div>
             )}
           </div>
@@ -162,22 +322,27 @@ export default function CoachPage() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-3">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center gap-2">
+              <div className="flex flex-col items-center justify-center h-full gap-3">
                 <div className="text-5xl">🤖</div>
-                <p className="font-bold text-dark text-lg">{coachName}</p>
-                <p className="text-muted text-sm">Ask me anything about your training, form, or programming.</p>
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  {[
-                    'What should I train today?',
-                    'How do I progress on pull-ups?',
-                    'Best warm-up for leg day?',
-                  ].map(suggestion => (
+                <div className="text-center">
+                  <p className="font-bold text-dark text-lg">{coachName}</p>
+                  <p className="text-muted text-sm mt-1">
+                    Specialized in fitness, gym, calisthenics & health.<br />
+                    Off-topic questions will be blocked.
+                  </p>
+                </div>
+
+                {/* Suggestion Cards */}
+                <div className="mt-2 grid grid-cols-2 gap-2 w-full max-w-md">
+                  {SUGGESTIONS.map(s => (
                     <button
-                      key={suggestion}
-                      onClick={() => setInput(suggestion)}
-                      className="text-xs bg-light text-muted px-3 py-1.5 rounded-full hover:bg-accent-soft hover:text-accent transition-colors"
+                      key={s.label}
+                      onClick={() => handleSuggestion(s.prompt)}
+                      disabled={loading}
+                      className="flex items-start gap-2.5 text-left bg-light hover:bg-accent-soft hover:border-accent/30 border border-border rounded-xl p-3 transition-colors group disabled:opacity-40"
                     >
-                      {suggestion}
+                      <span className="text-xl leading-none mt-0.5">{s.icon}</span>
+                      <span className="text-xs font-semibold text-dark group-hover:text-accent leading-snug">{s.label}</span>
                     </button>
                   ))}
                 </div>
@@ -185,20 +350,7 @@ export default function CoachPage() {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center text-sm mr-2 mt-0.5 flex-shrink-0">
-                    🤖
-                  </div>
-                )}
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-accent text-white rounded-br-none'
-                    : 'bg-light text-dark rounded-bl-none'
-                }`}>
-                  {msg.content}
-                </div>
-              </div>
+              <MessageBubble key={i} msg={msg} />
             ))}
 
             {loading && (
