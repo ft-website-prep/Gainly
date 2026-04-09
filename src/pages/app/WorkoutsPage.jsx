@@ -4,10 +4,15 @@ import BuildTab from '../../components/workouts/BuildTab'
 import ExploreTab from '../../components/workouts/ExploreTab'
 import ActiveWorkout from '../../components/workouts/ActiveWorkout'
 
-const TABS = [
-  { id: 'train',   label: 'Train',   icon: '⚡' },
-  { id: 'build',   label: 'Build',   icon: '🔨' },
-  { id: 'explore', label: 'Explore', icon: '🌳' },
+const NAV = [
+  {
+    group: 'WORKOUTS',
+    items: [
+      { id: 'train',   label: 'Train',   icon: '⚡' },
+      { id: 'build',   label: 'Build',   icon: '🔨' },
+      { id: 'explore', label: 'Explore', icon: '🌳' },
+    ],
+  },
 ]
 
 export default function WorkoutsPage() {
@@ -27,30 +32,43 @@ export default function WorkoutsPage() {
   }
 
   return (
-    <div className="max-w-6xl">
-      <div className="flex gap-2 mb-6">
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${
-              activeTab === tab.id
-                ? 'bg-dark text-white shadow-lg'
-                : 'bg-white border border-border text-muted hover:border-red-200 hover:text-dark'
-            }`}>
-            <span className="text-base">{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
+    <div className="flex gap-8" style={{ minHeight: 'calc(100vh - 160px)' }}>
+
+      {/* ── Left sidebar ── */}
+      <div className="w-52 flex-shrink-0">
+        <div className="sticky top-0 pt-1">
+          <h1 className="text-xl font-black text-dark mb-6 px-3">Workouts</h1>
+          {NAV.map(group => (
+            <div key={group.group} className="mb-5">
+              <p className="text-[10px] font-bold text-dim uppercase tracking-widest mb-1 px-3">{group.group}</p>
+              {group.items.map(item => (
+                <button key={item.id} onClick={() => setActiveTab(item.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 flex items-center gap-2.5 ${
+                    activeTab === item.id
+                      ? 'bg-surface border border-border text-dark font-semibold'
+                      : 'text-muted hover:text-dark hover:bg-surface border border-transparent'
+                  }`}>
+                  <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {activeTab === 'train'   && <TrainTab onStartWorkout={setActiveWorkout} onGoToExplore={goToExplore} />}
-      {activeTab === 'build'   && <BuildTab />}
-      {activeTab === 'explore' && (
-        <ExploreTab
-          key={`${exploreSection}-${exploreMethodId}`}
-          initialSection={exploreSection}
-          initialMethodId={exploreMethodId}
-        />
-      )}
+      {/* ── Main content ── */}
+      <div className="flex-1 min-w-0">
+        {activeTab === 'train'   && <TrainTab onStartWorkout={setActiveWorkout} onGoToExplore={goToExplore} />}
+        {activeTab === 'build'   && <BuildTab />}
+        {activeTab === 'explore' && (
+          <ExploreTab
+            key={`${exploreSection}-${exploreMethodId}`}
+            initialSection={exploreSection}
+            initialMethodId={exploreMethodId}
+          />
+        )}
+      </div>
     </div>
   )
 }
