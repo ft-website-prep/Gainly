@@ -6,7 +6,7 @@ import ActiveWorkout from '../../components/workouts/ActiveWorkout'
 
 const NAV = [
   {
-    group: 'WORKOUTS',
+    group: 'MANAGE',
     items: [
       { id: 'train',   label: 'Train',   icon: '⚡' },
       { id: 'build',   label: 'Build',   icon: '🔨' },
