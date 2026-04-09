@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
-// ── Storage ──────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────
 const COMPLETED_KEY = 'gainly_skill_completed'
 function loadCompleted() {
   try { return new Set(JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]')) }
@@ -25,59 +25,59 @@ const FEATURED_SKILLS = [
   { name: 'V-Sit',                icon: '💎', gradient: 'from-cyan-500 to-blue-500'     },
 ]
 
-// ── Progression criteria (name → { criteria, detail, next }) ──
+// ── Progression criteria ──────────────────────────────────
 const PROGRESSION_CRITERIA = {
-  'Wall Push-Up':              { next: 'Incline Push-Up',         criteria: '3 × 20 reps',       detail: 'Control every rep. Full range, no momentum.' },
-  'Incline Push-Up':           { next: 'Knee Push-Up',            criteria: '3 × 15 reps',       detail: 'Progress to knee push-ups once you hit 3×15 on a low incline.' },
-  'Knee Push-Up':              { next: 'Push-Up',                 criteria: '3 × 15 reps',       detail: 'If you can do 3×15 clean knee push-ups, try full push-ups.' },
-  'Push-Up':                   { next: 'Diamond Push-Up',         criteria: '3 × 20 reps',       detail: '3×20 clean push-ups with full ROM. Unlocks many paths.' },
-  'Wide Push-Up':              { next: 'Archer Push-Up',          criteria: '3 × 15 reps',       detail: 'Build wide push-up volume before the one-arm shift.' },
-  'Diamond Push-Up':           { next: 'Archer Push-Up',          criteria: '3 × 15 reps',       detail: 'Strong close grip is essential for single-arm work.' },
-  'Archer Push-Up':            { next: 'One Arm Push-Up',         criteria: '3 × 8 each side',   detail: '8 clean reps per side with full lockout.' },
-  'Decline Push-Up':           { next: 'Pike Push-Up',            criteria: '3 × 15 reps',       detail: 'Build overhead pressing strength on decline before pike.' },
-  'Pike Push-Up':              { next: 'Wall Handstand Push-Up',  criteria: '3 × 12 reps',       detail: 'Deep pike push-ups with head touching ground.' },
-  'Wall Handstand Push-Up':    { next: 'Handstand Push-Up',       criteria: '3 × 8 reps',        detail: '8 wall HSPU with full ROM. Then practice freestanding balance.' },
-  'Handstand Push-Up':         { next: '90 Degree Push-Up',       criteria: '3 × 5 reps',        detail: 'Freestanding HSPU is already elite. 90° is the final boss.' },
-  'Frog Stand':                { next: 'Tuck Planche',            criteria: '30 s hold',         detail: 'Hold a solid frog stand for 30 seconds before tucking into planche.' },
-  'Tuck Planche':              { next: 'Advanced Tuck Planche',   criteria: '15 s hold',         detail: '15 second tuck planche with hips level. Straighten back.' },
-  'Advanced Tuck Planche':     { next: 'Straddle Planche',        criteria: '12 s hold',         detail: '12 seconds clean. Slowly extend legs to straddle.' },
-  'Straddle Planche':          { next: 'Full Planche',            criteria: '10 s hold',         detail: '10 second straddle planche. Close legs gradually.' },
-  'Pseudo Planche Push-Up':    { next: 'Tuck Planche',            criteria: '3 × 10 reps',       detail: 'Strong lean with hands by hips. Builds planche-specific strength.' },
-  'Dips':                      { next: 'Ring Dips',               criteria: '3 × 15 reps',       detail: 'Solid parallel bar dips before moving to unstable rings.' },
-  'Ring Push-Up':              { next: 'Ring Dips',               criteria: '3 × 12 reps',       detail: 'Build ring stability with push-ups first.' },
-  'Dead Hang':                 { next: 'Scapular Pull-Up',        criteria: '45 s hold',         detail: 'Build grip and hang endurance. 45 seconds minimum.' },
-  'Scapular Pull-Up':          { next: 'Band-Assisted Pull-Up',   criteria: '3 × 15 reps',       detail: 'Learn to activate lats with scapular pulls before full pull-ups.' },
-  'Band-Assisted Pull-Up':     { next: 'Negative Pull-Up',        criteria: '3 × 10 (light)',    detail: 'Reduce band resistance over time. Move to negatives.' },
-  'Negative Pull-Up':          { next: 'Pull-Up',                 criteria: '3 × 5 (5 s down)',  detail: '5 slow negatives with 5-second descent. Almost a full pull-up!' },
-  'Australian Row':            { next: 'Ring Row',                criteria: '3 × 15 reps',       detail: 'Horizontal pulling strength. Lower the bar to make harder.' },
-  'Ring Row':                  { next: 'Pull-Up',                 criteria: '3 × 12 elevated',   detail: 'Feet elevated ring rows build pull-up strength.' },
-  'Pull-Up':                   { next: 'Weighted Pull-Up',        criteria: '3 × 12 reps',       detail: '12 clean pull-ups unlocks many paths.' },
-  'Wide Grip Pull-Up':         { next: 'Archer Pull-Up',          criteria: '3 × 10 reps',       detail: 'Wide grip with full ROM for one-arm work.' },
-  'Archer Pull-Up':            { next: 'Typewriter Pull-Up',      criteria: '3 × 6 each side',   detail: '6 per side with control. Building one-arm strength.' },
-  'Typewriter Pull-Up':        { next: 'One Arm Chin-Up',         criteria: '3 × 5 each side',   detail: 'Smooth side-to-side movement. Almost single-arm ready.' },
-  'Explosive Pull-Up':         { next: 'Muscle-Up',               criteria: '3 × 5 chest-to-bar', detail: 'Pull explosively to chest level. Transition practice separately.' },
-  'Chin-Up':                   { next: 'L-Sit Pull-Up',           criteria: '3 × 12 reps',       detail: 'Strong chin-ups plus L-sit hold = L-sit pull-up.' },
-  'Tuck Front Lever Row':      { next: 'Tuck Front Lever',        criteria: '3 × 8 reps',        detail: 'Build horizontal pulling strength in tuck position.' },
-  'Tuck Front Lever':          { next: 'Advanced Tuck Front Lever', criteria: '15 s hold',       detail: '15 seconds with flat back. Slowly extend hips.' },
-  'Advanced Tuck Front Lever': { next: 'Straddle Front Lever',    criteria: '12 s hold',         detail: '12 seconds clean. Straddle legs to progress.' },
-  'Straddle Front Lever':      { next: 'Full Front Lever',        criteria: '10 s hold',         detail: '10 seconds straddle. Close legs for full front lever.' },
-  'Assisted Squat':            { next: 'Bodyweight Squat',        criteria: '3 × 20 reps',       detail: 'Use less assistance until freestanding.' },
-  'Bodyweight Squat':          { next: 'Bulgarian Split Squat',   criteria: '3 × 20 reps',       detail: '20 deep squats. Ready for unilateral work.' },
-  'Bulgarian Split Squat':     { next: 'Box Pistol Squat',        criteria: '3 × 12 each leg',   detail: '12 per leg with full depth.' },
-  'Box Pistol Squat':          { next: 'Pistol Squat',            criteria: '3 × 8 each leg',    detail: 'Lower the box until full depth.' },
-  'Pistol Squat':              { next: 'Dragon Squat',            criteria: '3 × 5 each leg',    detail: 'Clean pistol squats. Dragon squat adds rotation.' },
-  'Glute Bridge':              { next: 'Single Leg Glute Bridge', criteria: '3 × 20 reps',       detail: 'Build base hip extension strength.' },
-  'Lunge':                     { next: 'Jumping Lunge',           criteria: '3 × 12 each leg',   detail: 'Stable lunges before explosive jumps.' },
-  'Dead Bug':                  { next: 'Plank',                   criteria: '3 × 15 reps',       detail: 'Learn core bracing with dead bugs first.' },
-  'Bird Dog':                  { next: 'Plank',                   criteria: '3 × 12 each side',  detail: 'Anti-rotation stability before static holds.' },
-  'Plank':                     { next: 'Hollow Body Hold',        criteria: '60 s hold',         detail: '60 second plank with posterior pelvic tilt.' },
-  'Hollow Body Hold':          { next: 'L-Sit',                   criteria: '30 s hold',         detail: '30 second hollow body. Add compression for L-sit.' },
-  'L-Sit':                     { next: 'V-Sit',                   criteria: '15 s hold',         detail: '15 seconds parallel bar L-sit. Pike higher for V-sit.' },
-  'Knee Raise (Hanging)':      { next: 'Hanging Leg Raise',       criteria: '3 × 15 reps',       detail: 'Control the swing. Straight legs next.' },
-  'Hanging Leg Raise':         { next: 'Toes to Bar',             criteria: '3 × 10 reps',       detail: 'Full ROM leg raises with no kip.' },
-  'Toes to Bar':               { next: 'Windshield Wiper',        criteria: '3 × 8 reps',        detail: 'Controlled toes to bar. Add rotation.' },
-  'Dragon Flag':               { next: 'Human Flag',              criteria: '3 × 5 reps',        detail: 'Master the eccentric. Human flag requires oblique strength too.' },
-  'Arch Body Hold':            { next: 'Back Lever Hold',         criteria: '30 s hold',         detail: 'Back extension endurance for back lever.' },
+  'Wall Push-Up':              { next: 'Incline Push-Up',          criteria: '3 × 20 reps',        detail: 'Control every rep. Full range, no momentum.' },
+  'Incline Push-Up':           { next: 'Knee Push-Up',             criteria: '3 × 15 reps',        detail: 'Progress to knee push-ups once you hit 3×15 on a low incline.' },
+  'Knee Push-Up':              { next: 'Push-Up',                  criteria: '3 × 15 reps',        detail: 'If you can do 3×15 clean knee push-ups, try full push-ups.' },
+  'Push-Up':                   { next: 'Diamond Push-Up',          criteria: '3 × 20 reps',        detail: '3×20 clean push-ups with full ROM. Unlocks many paths.' },
+  'Wide Push-Up':              { next: 'Archer Push-Up',           criteria: '3 × 15 reps',        detail: 'Build wide push-up volume before the one-arm shift.' },
+  'Diamond Push-Up':           { next: 'Archer Push-Up',           criteria: '3 × 15 reps',        detail: 'Strong close grip is essential for single-arm work.' },
+  'Archer Push-Up':            { next: 'One Arm Push-Up',          criteria: '3 × 8 each side',    detail: '8 clean reps per side with full lockout.' },
+  'Decline Push-Up':           { next: 'Pike Push-Up',             criteria: '3 × 15 reps',        detail: 'Build overhead pressing strength on decline before pike.' },
+  'Pike Push-Up':              { next: 'Wall Handstand Push-Up',   criteria: '3 × 12 reps',        detail: 'Deep pike push-ups with head touching ground.' },
+  'Wall Handstand Push-Up':    { next: 'Handstand Push-Up',        criteria: '3 × 8 reps',         detail: '8 wall HSPU with full ROM. Then practice freestanding balance.' },
+  'Handstand Push-Up':         { next: '90 Degree Push-Up',        criteria: '3 × 5 reps',         detail: 'Freestanding HSPU is already elite. 90° is the final boss.' },
+  'Frog Stand':                { next: 'Tuck Planche',             criteria: '30 s hold',          detail: 'Hold a solid frog stand for 30 seconds before tucking into planche.' },
+  'Tuck Planche':              { next: 'Advanced Tuck Planche',    criteria: '15 s hold',          detail: '15 second tuck planche with hips level. Straighten back.' },
+  'Advanced Tuck Planche':     { next: 'Straddle Planche',         criteria: '12 s hold',          detail: '12 seconds clean. Slowly extend legs to straddle.' },
+  'Straddle Planche':          { next: 'Full Planche',             criteria: '10 s hold',          detail: '10 second straddle planche. Close legs gradually.' },
+  'Pseudo Planche Push-Up':    { next: 'Tuck Planche',             criteria: '3 × 10 reps',        detail: 'Strong lean with hands by hips. Builds planche-specific strength.' },
+  'Dips':                      { next: 'Ring Dips',                criteria: '3 × 15 reps',        detail: 'Solid parallel bar dips before moving to unstable rings.' },
+  'Ring Push-Up':              { next: 'Ring Dips',                criteria: '3 × 12 reps',        detail: 'Build ring stability with push-ups first.' },
+  'Dead Hang':                 { next: 'Scapular Pull-Up',         criteria: '45 s hold',          detail: 'Build grip and hang endurance. 45 seconds minimum.' },
+  'Scapular Pull-Up':          { next: 'Band-Assisted Pull-Up',    criteria: '3 × 15 reps',        detail: 'Learn to activate lats with scapular pulls before full pull-ups.' },
+  'Band-Assisted Pull-Up':     { next: 'Negative Pull-Up',         criteria: '3 × 10 (light)',     detail: 'Reduce band resistance over time. Move to negatives.' },
+  'Negative Pull-Up':          { next: 'Pull-Up',                  criteria: '3 × 5 (5 s down)',   detail: '5 slow negatives with 5-second descent. Almost a full pull-up!' },
+  'Australian Row':            { next: 'Ring Row',                 criteria: '3 × 15 reps',        detail: 'Horizontal pulling strength. Lower the bar to make harder.' },
+  'Ring Row':                  { next: 'Pull-Up',                  criteria: '3 × 12 elevated',    detail: 'Feet elevated ring rows build pull-up strength.' },
+  'Pull-Up':                   { next: 'Weighted Pull-Up',         criteria: '3 × 12 reps',        detail: '12 clean pull-ups unlocks many paths.' },
+  'Wide Grip Pull-Up':         { next: 'Archer Pull-Up',           criteria: '3 × 10 reps',        detail: 'Wide grip with full ROM for one-arm work.' },
+  'Archer Pull-Up':            { next: 'Typewriter Pull-Up',       criteria: '3 × 6 each side',    detail: '6 per side with control. Building one-arm strength.' },
+  'Typewriter Pull-Up':        { next: 'One Arm Chin-Up',          criteria: '3 × 5 each side',    detail: 'Smooth side-to-side movement. Almost single-arm ready.' },
+  'Explosive Pull-Up':         { next: 'Muscle-Up',                criteria: '3 × 5 chest-to-bar', detail: 'Pull explosively to chest level. Transition practice separately.' },
+  'Chin-Up':                   { next: 'L-Sit Pull-Up',            criteria: '3 × 12 reps',        detail: 'Strong chin-ups plus L-sit hold = L-sit pull-up.' },
+  'Tuck Front Lever Row':      { next: 'Tuck Front Lever',         criteria: '3 × 8 reps',         detail: 'Build horizontal pulling strength in tuck position.' },
+  'Tuck Front Lever':          { next: 'Advanced Tuck Front Lever', criteria: '15 s hold',         detail: '15 seconds with flat back. Slowly extend hips.' },
+  'Advanced Tuck Front Lever': { next: 'Straddle Front Lever',     criteria: '12 s hold',          detail: '12 seconds clean. Straddle legs to progress.' },
+  'Straddle Front Lever':      { next: 'Full Front Lever',         criteria: '10 s hold',          detail: '10 seconds straddle. Close legs for full front lever.' },
+  'Assisted Squat':            { next: 'Bodyweight Squat',         criteria: '3 × 20 reps',        detail: 'Use less assistance until freestanding.' },
+  'Bodyweight Squat':          { next: 'Bulgarian Split Squat',    criteria: '3 × 20 reps',        detail: '20 deep squats. Ready for unilateral work.' },
+  'Bulgarian Split Squat':     { next: 'Box Pistol Squat',         criteria: '3 × 12 each leg',    detail: '12 per leg with full depth.' },
+  'Box Pistol Squat':          { next: 'Pistol Squat',             criteria: '3 × 8 each leg',     detail: 'Lower the box until full depth.' },
+  'Pistol Squat':              { next: 'Dragon Squat',             criteria: '3 × 5 each leg',     detail: 'Clean pistol squats. Dragon squat adds rotation.' },
+  'Glute Bridge':              { next: 'Single Leg Glute Bridge',  criteria: '3 × 20 reps',        detail: 'Build base hip extension strength.' },
+  'Lunge':                     { next: 'Jumping Lunge',            criteria: '3 × 12 each leg',    detail: 'Stable lunges before explosive jumps.' },
+  'Dead Bug':                  { next: 'Plank',                    criteria: '3 × 15 reps',        detail: 'Learn core bracing with dead bugs first.' },
+  'Bird Dog':                  { next: 'Plank',                    criteria: '3 × 12 each side',   detail: 'Anti-rotation stability before static holds.' },
+  'Plank':                     { next: 'Hollow Body Hold',         criteria: '60 s hold',          detail: '60 second plank with posterior pelvic tilt.' },
+  'Hollow Body Hold':          { next: 'L-Sit',                    criteria: '30 s hold',          detail: '30 second hollow body. Add compression for L-sit.' },
+  'L-Sit':                     { next: 'V-Sit',                    criteria: '15 s hold',          detail: '15 seconds parallel bar L-sit. Pike higher for V-sit.' },
+  'Knee Raise (Hanging)':      { next: 'Hanging Leg Raise',        criteria: '3 × 15 reps',        detail: 'Control the swing. Straight legs next.' },
+  'Hanging Leg Raise':         { next: 'Toes to Bar',              criteria: '3 × 10 reps',        detail: 'Full ROM leg raises with no kip.' },
+  'Toes to Bar':               { next: 'Windshield Wiper',         criteria: '3 × 8 reps',         detail: 'Controlled toes to bar. Add rotation.' },
+  'Dragon Flag':               { next: 'Human Flag',               criteria: '3 × 5 reps',         detail: 'Master the eccentric. Human flag requires oblique strength too.' },
+  'Arch Body Hold':            { next: 'Back Lever Hold',          criteria: '30 s hold',          detail: 'Back extension endurance for back lever.' },
 }
 
 // ── Graph builder ─────────────────────────────────────────
@@ -92,20 +92,22 @@ function buildGraph(targetEx, exercises, links) {
     if (!ex) continue
     if (!nodes.has(id)) nodes.set(id, { exercise: ex, level })
     else nodes.get(id).level = Math.max(nodes.get(id).level, level)
-    links.filter(l => l.exercise_id === id && l.link_type === 'prerequisite').forEach(l => {
-      const childEx = exMap[l.related_exercise_id]
-      if (childEx && !visited.has(l.related_exercise_id)) {
-        edges.push({ from: l.related_exercise_id, to: id })
-        queue.push({ id: l.related_exercise_id, level: level + 1 })
-      }
-    })
+    links
+      .filter(l => l.exercise_id === id && l.link_type === 'prerequisite')
+      .forEach(l => {
+        const childEx = exMap[l.related_exercise_id]
+        if (childEx && !visited.has(l.related_exercise_id)) {
+          edges.push({ from: l.related_exercise_id, to: id })
+          queue.push({ id: l.related_exercise_id, level: level + 1 })
+        }
+      })
   }
-  if (nodes.size === 0) return { nodes: [], edges: [] }
-  const levels = {}
-  nodes.forEach((n, id) => { if (!levels[n.level]) levels[n.level] = []; levels[n.level].push(id) })
-  const maxLevel = Math.max(...Object.keys(levels).map(Number))
+  if (nodes.size === 0) return { nodes: [], edges: [], maxLevel: 0 }
+  const byLevel = {}
+  nodes.forEach((n, id) => { if (!byLevel[n.level]) byLevel[n.level] = []; byLevel[n.level].push(id) })
+  const maxLevel = Math.max(...Object.keys(byLevel).map(Number))
   const result = []
-  Object.entries(levels).forEach(([lvl, ids]) => {
+  Object.entries(byLevel).forEach(([lvl, ids]) => {
     ids.forEach(id => {
       result.push({ id, exercise: nodes.get(id).exercise, level: parseInt(lvl), isTarget: parseInt(lvl) === 0, isBase: parseInt(lvl) === maxLevel })
     })
@@ -113,7 +115,7 @@ function buildGraph(targetEx, exercises, links) {
   return { nodes: result, edges, maxLevel }
 }
 
-// ── Unlock logic ──────────────────────────────────────────
+// ── Unlock availability ───────────────────────────────────
 function computeAvailable(graphNodes, graphEdges, completedSet) {
   const prereqsOf = {}
   for (const e of graphEdges) {
@@ -131,31 +133,56 @@ function computeAvailable(graphNodes, graphEdges, completedSet) {
 }
 
 // ── Layout constants ──────────────────────────────────────
-const R = 36            // node radius
-const D = R * 2         // node diameter
-const ROW_H = 170       // height per tree level
-const H_GAP = 32        // horizontal gap between sibling nodes
-const LABEL_W = 96      // left zone for level labels
-const V_PAD = 40        // top/bottom padding
-const H_PAD = 24        // extra horizontal padding on right
+const R       = 36    // node radius px
+const D       = R * 2 // diameter
+const ROW_H   = 170   // height per tree level
+const H_GAP   = 36    // horizontal gap between siblings
+const LABEL_W = 88    // left label column width
+const H_PAD   = 32    // horizontal padding right
+const V_PAD   = 48    // vertical padding
 
+// Band config by fraction of maxLevel
+function bandConfig(lvlIdx, maxLevel) {
+  const f = maxLevel > 0 ? lvlIdx / maxLevel : 0
+  if (f < 0.28) return { label: 'ADVANCED',     color: '#f43f5e', rgba: 'rgba(244,63,94,'    }
+  if (f < 0.6)  return { label: 'INTERMEDIATE', color: '#f59e0b', rgba: 'rgba(245,158,11,'   }
+  return               { label: 'BEGINNER',      color: '#22c55e', rgba: 'rgba(34,197,94,'    }
+}
+
+// Build groups of consecutive rows with same band label
+function buildBandGroups(maxLevel) {
+  const groups = []
+  let cur = null
+  for (let lvl = 0; lvl <= maxLevel; lvl++) {
+    const cfg = bandConfig(lvl, maxLevel)
+    if (!cur || cur.label !== cfg.label) {
+      cur = { label: cfg.label, color: cfg.color, rgba: cfg.rgba, startLvl: lvl, endLvl: lvl }
+      groups.push(cur)
+    } else {
+      cur.endLvl = lvl
+    }
+  }
+  return groups
+}
+
+// ── Layout builder ────────────────────────────────────────
 function buildLayout(graphNodes, maxLevel) {
   const byLevel = {}
   for (const n of graphNodes) {
     if (!byLevel[n.level]) byLevel[n.level] = []
     byLevel[n.level].push(n)
   }
-  const maxInRow = Math.max(...Object.values(byLevel).map(r => r.length))
-  const contentW = Math.max(maxInRow * (D + H_GAP) - H_GAP, D)
-  const totalW = LABEL_W + contentW + H_PAD * 2
-  const totalH = (maxLevel + 1) * ROW_H + V_PAD * 2
+  const maxInRow   = Math.max(...Object.values(byLevel).map(r => r.length), 1)
+  const contentW   = Math.max(maxInRow * (D + H_GAP) - H_GAP, D)
+  const totalW     = LABEL_W + contentW + H_PAD * 2
+  const totalH     = (maxLevel + 1) * ROW_H + V_PAD * 2
 
   const positioned = {}
   for (let lvl = 0; lvl <= maxLevel; lvl++) {
-    const row = byLevel[lvl] || []
-    const rowW = row.length * (D + H_GAP) - H_GAP
+    const row    = byLevel[lvl] || []
+    const rowW   = row.length * (D + H_GAP) - H_GAP
     const startX = LABEL_W + H_PAD + (contentW - rowW) / 2 + R
-    const cy = V_PAD + lvl * ROW_H + ROW_H / 2
+    const cy     = V_PAD + lvl * ROW_H + ROW_H / 2
     row.forEach((node, idx) => {
       positioned[node.id] = { ...node, cx: startX + idx * (D + H_GAP), cy }
     })
@@ -163,32 +190,22 @@ function buildLayout(graphNodes, maxLevel) {
   return { positioned, totalW, totalH, contentW }
 }
 
-// ── Level band config ─────────────────────────────────────
-function bandConfig(levelIdx, maxLevel) {
-  const f = maxLevel > 0 ? levelIdx / maxLevel : 0
-  if (f <= 0.25) return { label: 'ADVANCED',     color: '#f43f5e', bg: 'rgba(244,63,94,0.07)' }
-  if (f <= 0.55) return { label: 'INTERMEDIATE', color: '#f59e0b', bg: 'rgba(245,158,11,0.07)' }
-  return                 { label: 'BEGINNER',     color: '#22c55e', bg: 'rgba(34,197,94,0.07)' }
-}
-
 // ── Node detail modal ─────────────────────────────────────
 function NodeModal({ node, isCompleted, isAvailable, onComplete, onUndo, onClose }) {
   const criteria = PROGRESSION_CRITERIA[node.exercise.name]
-  const diff = node.exercise.difficulty
+  const diff     = node.exercise.difficulty
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
       onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* Dark header with 3D placeholder */}
         <div className="bg-gray-950 px-5 pt-6 pb-5">
-          {/* 3D model placeholder — ready for video/model swap */}
-          <div className="w-20 h-20 mx-auto rounded-full bg-gray-800 border-2 border-gray-600 flex flex-col items-center justify-center mb-3 relative overflow-hidden">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gray-800 border-2 border-gray-700 flex flex-col items-center justify-center mb-3 relative overflow-hidden">
             <span className="text-3xl">{node.exercise.is_static_hold ? '⏱️' : '💪'}</span>
             <span className="text-[8px] text-gray-500 mt-0.5 font-medium tracking-wide">3D SOON</span>
-            {/* Video placeholder overlay */}
-            <div className="absolute inset-0 border-2 border-dashed border-gray-700 rounded-full opacity-40" />
+            <div className="absolute inset-0 border-2 border-dashed border-gray-700 rounded-full opacity-30" />
           </div>
           <h3 className="text-white font-black text-center text-lg leading-tight">{node.exercise.name}</h3>
           <div className="flex items-center justify-center gap-2 mt-1.5">
@@ -207,7 +224,6 @@ function NodeModal({ node, isCompleted, isAvailable, onComplete, onUndo, onClose
             <p className="text-xs text-muted leading-relaxed">{node.exercise.description}</p>
           )}
 
-          {/* Unlock criteria */}
           {criteria && !node.isTarget && (
             <div className={`rounded-xl p-3 border ${
               isCompleted ? 'bg-green-50 border-green-200' :
@@ -234,7 +250,7 @@ function NodeModal({ node, isCompleted, isAvailable, onComplete, onUndo, onClose
           {node.isTarget && (
             <div className="rounded-xl p-3 border bg-blue-50 border-blue-200">
               <p className="text-[10px] font-bold text-blue-700 mb-1">🏆 Goal skill</p>
-              <p className="text-[10px] text-blue-500">Complete all prerequisites to unlock this. Once achieved, mark it to finish your journey.</p>
+              <p className="text-[10px] text-blue-500 leading-relaxed">Complete all prerequisites to unlock this. Mark it when achieved to finish your journey.</p>
             </div>
           )}
 
@@ -277,180 +293,332 @@ function NodeModal({ node, isCompleted, isAvailable, onComplete, onUndo, onClose
   )
 }
 
-// ── Pyramid tree canvas ───────────────────────────────────
+// ── Pyramid canvas ────────────────────────────────────────
 function PyramidTree({ graph, completedSet, onToggle }) {
-  const [selected, setSelected] = useState(null)
+  const [selectedNode, setSelectedNode] = useState(null)
   const { nodes, edges, maxLevel } = graph
   const { positioned, totalW, totalH } = buildLayout(nodes, maxLevel)
-  const available = computeAvailable(nodes, edges, completedSet)
-
-  // Determine which bands changed label (for side labels)
-  const bandLabels = []
-  for (let lvl = 0; lvl <= maxLevel; lvl++) {
-    const cfg = bandConfig(lvl, maxLevel)
-    const prev = lvl > 0 ? bandConfig(lvl - 1, maxLevel) : null
-    bandLabels.push({ lvl, cfg, showLabel: !prev || prev.label !== cfg.label })
-  }
-
-  const posArr = Object.values(positioned)
+  const available   = computeAvailable(nodes, edges, completedSet)
+  const bandGroups  = buildBandGroups(maxLevel)
+  const posArr      = Object.values(positioned)
 
   return (
     <>
-      <div className="overflow-auto rounded-2xl border border-gray-800 bg-gray-950" style={{ maxHeight: 640 }}>
-        <div className="relative" style={{ width: totalW, height: totalH, minWidth: '100%' }}>
+      <div className="relative select-none" style={{ width: totalW, height: totalH }}>
 
-          {/* ── Row bands + level labels ── */}
-          {bandLabels.map(({ lvl, cfg, showLabel }) => (
-            <div key={lvl} className="absolute left-0 right-0"
-              style={{ top: V_PAD + lvl * ROW_H, height: ROW_H, background: cfg.bg, borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-              {showLabel && (
-                <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4" style={{ width: LABEL_W }}>
-                  <span className="text-[9px] font-black tracking-[0.18em] uppercase select-none"
-                    style={{ color: cfg.color, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                    {cfg.label}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* ── SVG: connecting lines ── */}
-          <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
-            <defs>
-              <radialGradient id="glow-amber" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.6"/>
-                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0"/>
-              </radialGradient>
-            </defs>
-            {edges.map((edge, i) => {
-              const from = positioned[edge.from]
-              const to   = positioned[edge.to]
-              if (!from || !to) return null
-              const active = completedSet.has(edge.from)
-              const x1 = from.cx, y1 = from.cy
-              const x2 = to.cx,   y2 = to.cy
-              return (
-                <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke={active ? '#f59e0b' : 'rgba(255,255,255,0.12)'}
-                  strokeWidth={active ? 2.5 : 1.5}
-                  strokeDasharray={active ? 'none' : '5 4'}
-                  strokeLinecap="round"
-                />
-              )
-            })}
-          </svg>
-
-          {/* ── Nodes ── */}
-          {posArr.map(node => {
-            const isCompleted = completedSet.has(node.id)
-            const isAvail     = available.has(node.id)
-            const locked      = !isCompleted && !isAvail
-
-            // Visual state
-            let ringColor   = '#374151'   // locked: gray
-            let bgColor     = 'rgba(17,24,39,0.6)'
-            let opacity     = 0.38
-            let shadowStyle = {}
-
-            if (isCompleted) {
-              ringColor   = '#4ade80'
-              bgColor     = 'rgba(21,128,61,0.25)'
-              opacity     = 1
-              shadowStyle = { boxShadow: '0 0 18px 4px rgba(74,222,128,0.25)' }
-            } else if (isAvail) {
-              ringColor   = node.isTarget ? '#60a5fa' : '#fbbf24'
-              bgColor     = 'rgba(17,24,39,0.85)'
-              opacity     = 1
-              shadowStyle = node.isTarget
-                ? { boxShadow: '0 0 22px 6px rgba(96,165,250,0.30)' }
-                : { boxShadow: '0 0 18px 4px rgba(251,191,36,0.28)' }
-            }
-
-            const nodeSize = node.isTarget ? D + 8 : D
-            const nodeR    = nodeSize / 2
-
-            return (
-              <div key={node.id} className="absolute" style={{ left: node.cx - nodeR, top: node.cy - nodeR }}>
-                {/* Pulse ring for available non-completed */}
-                {isAvail && !isCompleted && (
-                  <div className="absolute inset-0 rounded-full animate-ping"
-                    style={{ border: `2px solid ${ringColor}`, opacity: 0.25, borderRadius: '50%' }} />
-                )}
-
-                {/* Main node circle */}
-                <div
-                  onClick={() => setSelected(node)}
-                  className="rounded-full flex flex-col items-center justify-center cursor-pointer relative transition-all duration-200 select-none"
-                  style={{
-                    width: nodeSize, height: nodeSize,
-                    border: `2.5px solid ${ringColor}`,
-                    background: bgColor,
-                    opacity,
-                    ...shadowStyle,
-                  }}
-                >
-                  {/* 3D model zone — placeholder until 3D models are ready */}
-                  {locked ? (
-                    <span className="text-lg select-none">🔒</span>
-                  ) : isCompleted ? (
-                    <span className="text-2xl select-none">✓</span>
-                  ) : (
-                    <div className="flex flex-col items-center gap-0.5">
-                      {/* Placeholder circle for 3D model video */}
-                      <div className="w-9 h-9 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center">
-                        <span className="text-base select-none">{node.exercise.is_static_hold ? '⏱️' : '💪'}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* GOAL badge */}
-                  {node.isTarget && isAvail && (
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                      <span className="text-[8px] font-black bg-blue-500 text-white px-2 py-0.5 rounded-full tracking-wide">GOAL</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Label below node */}
-                <div className="text-center mt-2" style={{ width: nodeSize + 20, marginLeft: -10 }}>
-                  <span className={`text-[9px] font-semibold leading-tight block ${
-                    locked ? 'text-gray-600' : isCompleted ? 'text-green-400' : node.isTarget ? 'text-blue-300' : 'text-gray-200'
-                  }`}>
-                    {node.exercise.name.length > 15 ? node.exercise.name.slice(0, 14) + '…' : node.exercise.name}
-                  </span>
-                  {!locked && !isCompleted && PROGRESSION_CRITERIA[node.exercise.name] && (
-                    <span className="text-[8px] text-amber-500 font-bold block mt-0.5">
-                      {PROGRESSION_CRITERIA[node.exercise.name].criteria}
-                    </span>
-                  )}
-                </div>
+        {/* ── Gradient band backgrounds ── */}
+        {bandGroups.map((group, gi) => {
+          const nextGroup = bandGroups[gi + 1]
+          const y  = V_PAD + group.startLvl * ROW_H
+          const h  = (group.endLvl - group.startLvl + 1) * ROW_H
+          // gradient: solid for most of the band, fade to next band color at bottom 40%
+          const bg = nextGroup
+            ? `linear-gradient(to bottom, ${group.rgba}0.09) 0%, ${group.rgba}0.09) 55%, ${nextGroup.rgba}0.09) 100%)`
+            : `${group.rgba}0.09)`
+          return (
+            <div key={group.label + gi} className="absolute left-0 right-0"
+              style={{ top: y, height: h, background: bg }}>
+              {/* Left label */}
+              <div className="absolute left-0 top-0 bottom-0 flex items-center pl-3" style={{ width: LABEL_W }}>
+                <span className="text-[10px] font-black uppercase tracking-[0.14em]"
+                  style={{ color: group.color }}>
+                  {group.label}
+                </span>
               </div>
+              {/* Subtle border at top of each band */}
+              <div className="absolute left-0 right-0 top-0 h-px opacity-20"
+                style={{ background: group.color }} />
+            </div>
+          )
+        })}
+
+        {/* ── SVG: connecting lines ── */}
+        <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
+          {edges.map((edge, i) => {
+            const from = positioned[edge.from]
+            const to   = positioned[edge.to]
+            if (!from || !to) return null
+            const active = completedSet.has(edge.from)
+            return (
+              <line key={i}
+                x1={from.cx} y1={from.cy}
+                x2={to.cx}   y2={to.cy}
+                stroke={active ? '#f59e0b' : 'rgba(255,255,255,0.13)'}
+                strokeWidth={active ? 2.5 : 1.5}
+                strokeDasharray={active ? 'none' : '5 5'}
+                strokeLinecap="round"
+              />
             )
           })}
-        </div>
+          {/* Arrowheads on active lines */}
+          <defs>
+            <marker id="arrow-up" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+              <polygon points="0,8 4,0 8,8" fill="#f59e0b" opacity="0.8" />
+            </marker>
+          </defs>
+          {edges.map((edge, i) => {
+            const from = positioned[edge.from]
+            const to   = positioned[edge.to]
+            if (!from || !to || !completedSet.has(edge.from)) return null
+            // Midpoint arrow indicator
+            const mx = (from.cx + to.cx) / 2
+            const my = (from.cy + to.cy) / 2
+            const angle = Math.atan2(to.cy - from.cy, to.cx - from.cx) * 180 / Math.PI
+            return (
+              <g key={`arrow-${i}`} transform={`translate(${mx},${my}) rotate(${angle})`}>
+                <polygon points="-6,4 0,-4 6,4" fill="#f59e0b" opacity="0.7" />
+              </g>
+            )
+          })}
+        </svg>
+
+        {/* ── Nodes ── */}
+        {posArr.map(node => {
+          const isCompleted = completedSet.has(node.id)
+          const isAvail     = available.has(node.id)
+          const locked      = !isCompleted && !isAvail
+
+          let ring    = '#374151'
+          let bg      = 'rgba(17,24,39,0.55)'
+          let opacity = 0.35
+          let shadow  = {}
+
+          if (isCompleted) {
+            ring    = '#4ade80'
+            bg      = 'rgba(21,128,61,0.22)'
+            opacity = 1
+            shadow  = { boxShadow: '0 0 20px 4px rgba(74,222,128,0.22)' }
+          } else if (node.isTarget && isAvail) {
+            ring    = '#60a5fa'
+            bg      = 'rgba(17,24,39,0.9)'
+            opacity = 1
+            shadow  = { boxShadow: '0 0 24px 8px rgba(96,165,250,0.28)' }
+          } else if (isAvail) {
+            ring    = '#fbbf24'
+            bg      = 'rgba(17,24,39,0.9)'
+            opacity = 1
+            shadow  = { boxShadow: '0 0 20px 4px rgba(251,191,36,0.25)' }
+          }
+
+          const nodeD = node.isTarget ? D + 10 : D
+          const nodeR = nodeD / 2
+
+          return (
+            <div key={node.id} className="absolute"
+              style={{ left: node.cx - nodeR, top: node.cy - nodeR }}>
+
+              {/* Pulse ring for available */}
+              {isAvail && !isCompleted && (
+                <div className="absolute rounded-full animate-ping"
+                  style={{ inset: -4, border: `2px solid ${ring}`, opacity: 0.2 }} />
+              )}
+
+              {/* Circle */}
+              <div
+                onClick={() => setSelectedNode(node)}
+                className="rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-200 relative"
+                style={{ width: nodeD, height: nodeD, border: `2.5px solid ${ring}`, background: bg, opacity, ...shadow }}
+              >
+                {locked ? (
+                  <span className="text-lg">🔒</span>
+                ) : isCompleted ? (
+                  <span className="text-[22px] font-black text-green-400">✓</span>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gray-800/80 border border-gray-700 flex items-center justify-center">
+                    <span className="text-base">{node.exercise.is_static_hold ? '⏱️' : '💪'}</span>
+                  </div>
+                )}
+
+                {/* GOAL badge */}
+                {node.isTarget && isAvail && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="text-[8px] font-black bg-blue-500 text-white px-1.5 py-0.5 rounded-full tracking-wide whitespace-nowrap">GOAL</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Label below */}
+              <div className="text-center mt-1.5" style={{ width: nodeD + 28, marginLeft: -(28 / 2) }}>
+                <span className={`text-[9px] font-semibold leading-tight block ${
+                  locked ? 'text-gray-600' : isCompleted ? 'text-green-400' : node.isTarget ? 'text-blue-300' : 'text-gray-200'
+                }`}>
+                  {node.exercise.name.length > 15 ? node.exercise.name.slice(0, 14) + '…' : node.exercise.name}
+                </span>
+                {!locked && !isCompleted && PROGRESSION_CRITERIA[node.exercise.name] && (
+                  <span className="text-[8px] text-amber-500 font-bold block mt-0.5">
+                    {PROGRESSION_CRITERIA[node.exercise.name].criteria}
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Modal */}
-      {selected && (
+      {/* Node modal */}
+      {selectedNode && (
         <NodeModal
-          node={selected}
-          isCompleted={completedSet.has(selected.id)}
-          isAvailable={available.has(selected.id)}
-          onComplete={() => { onToggle(selected.id, true);  setSelected(null) }}
-          onUndo={() =>    { onToggle(selected.id, false); setSelected(null) }}
-          onClose={() => setSelected(null)}
+          node={selectedNode}
+          isCompleted={completedSet.has(selectedNode.id)}
+          isAvailable={available.has(selectedNode.id)}
+          onComplete={() => { onToggle(selectedNode.id, true);  setSelectedNode(null) }}
+          onUndo={() =>    { onToggle(selectedNode.id, false); setSelectedNode(null) }}
+          onClose={() => setSelectedNode(null)}
         />
       )}
     </>
   )
 }
 
+// ── Full-screen overlay ───────────────────────────────────
+function SkillTreeOverlay({ skill, graph, completedSet, onToggle, onClose }) {
+  const scrollRef  = useRef(null)
+  const [canUp,   setCanUp]   = useState(false)
+  const [canDown, setCanDown] = useState(false)
+
+  const completedInTree = graph.nodes.filter(n => completedSet.has(n.id)).length
+  const totalInTree     = graph.nodes.length
+  const pct             = totalInTree > 0 ? Math.round(completedInTree / totalInTree * 100) : 0
+
+  function checkScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    setCanUp(el.scrollTop > 12)
+    setCanDown(el.scrollTop < el.scrollHeight - el.clientHeight - 12)
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    // Center horizontally if pyramid is wider than viewport
+    el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2)
+    // Small delay to get correct scrollHeight
+    requestAnimationFrame(checkScroll)
+  }, [])
+
+  // Block body scroll while overlay is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  function scrollBy(amount) {
+    scrollRef.current?.scrollBy({ top: amount, behavior: 'smooth' })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col bg-gray-950">
+
+      {/* ── Top bar ── */}
+      <div className="flex-shrink-0 px-4 sm:px-6 border-b border-gray-800"
+        style={{ height: 56 }}>
+        <div className="h-full flex items-center gap-4">
+
+          {/* Back button */}
+          <button onClick={onClose}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors flex-shrink-0 group">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M11 4L6 9l5 5"/>
+            </svg>
+            <span className="text-sm font-semibold">Back</span>
+          </button>
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-gray-500 text-sm flex-shrink-0">Skill Trees</span>
+            <span className="text-gray-600 flex-shrink-0">›</span>
+            <span className="text-[13px] font-bold text-white truncate">{skill.name}</span>
+          </div>
+
+          {/* Progress */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="hidden sm:block w-28 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full bg-accent rounded-full transition-all duration-500"
+                style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">
+              {completedInTree} / {totalInTree}
+              <span className="text-accent ml-1 font-bold">{pct}%</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Scrollable tree ── */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Scroll container */}
+        <div
+          ref={scrollRef}
+          onScroll={checkScroll}
+          className="absolute inset-0 overflow-auto"
+        >
+          {/* Center the pyramid horizontally, align to top */}
+          <div className="flex justify-center items-start" style={{ minHeight: '100%', padding: '32px 24px' }}>
+            <PyramidTree graph={graph} completedSet={completedSet} onToggle={onToggle} />
+          </div>
+        </div>
+
+        {/* ── Scroll arrow UP ── */}
+        {canUp && (
+          <button
+            onClick={() => scrollBy(-ROW_H)}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-10
+              w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700
+              flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-700
+              transition-all duration-150 shadow-xl backdrop-blur-sm"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M2 10L7 4l5 6"/>
+            </svg>
+          </button>
+        )}
+
+        {/* ── Scroll arrow DOWN ── */}
+        {canDown && (
+          <button
+            onClick={() => scrollBy(ROW_H)}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10
+              w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700
+              flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-700
+              transition-all duration-150 shadow-xl backdrop-blur-sm"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M2 4l5 6 5-6"/>
+            </svg>
+          </button>
+        )}
+
+        {/* Subtle top/bottom fade masks */}
+        <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-gray-950 to-transparent pointer-events-none z-[5]" />
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-950 to-transparent pointer-events-none z-[5]" />
+      </div>
+
+      {/* ── Bottom legend ── */}
+      <div className="flex-shrink-0 px-6 py-2.5 border-t border-gray-800/60 flex items-center justify-center gap-6">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+          <span className="text-[10px] text-gray-500">Completed</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+          <span className="text-[10px] text-gray-500">Available</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
+          <span className="text-[10px] text-gray-500">Locked</span>
+        </div>
+        <span className="text-[10px] text-gray-600">Tap a node to view details</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Main export ───────────────────────────────────────────
 export default function SkillTrees() {
-  const [exercises, setExercises]   = useState([])
-  const [links, setLinks]           = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [selected, setSelected]     = useState(null)
+  const [exercises, setExercises]    = useState([])
+  const [links, setLinks]            = useState([])
+  const [loading, setLoading]        = useState(true)
+  const [openSkill, setOpenSkill]    = useState(null)   // { name, icon, gradient }
   const [completedSet, setCompleted] = useState(loadCompleted)
 
   useEffect(() => {
@@ -467,11 +635,11 @@ export default function SkillTrees() {
   const exByName = useMemo(() => Object.fromEntries(exercises.map(e => [e.name, e])), [exercises])
 
   const graph = useMemo(() => {
-    if (!selected) return null
-    const targetEx = exByName[selected]
+    if (!openSkill) return null
+    const targetEx = exByName[openSkill.name]
     if (!targetEx) return null
     return buildGraph(targetEx, exercises, links)
-  }, [selected, exercises, links, exByName])
+  }, [openSkill, exercises, links, exByName])
 
   function handleToggle(exerciseId, markDone) {
     setCompleted(prev => {
@@ -483,108 +651,66 @@ export default function SkillTrees() {
     })
   }
 
-  const completedCount = graph ? graph.nodes.filter(n => completedSet.has(n.id)).length : 0
-  const totalCount     = graph ? graph.nodes.length : 0
-
   if (loading) return <div className="text-center py-12 text-muted">Loading skill trees…</div>
 
   return (
-    <div>
-      <p className="text-sm text-muted mb-6">
-        Select a goal skill. Unlock each step by hitting the rep or hold target — complete prerequisites to advance.
-      </p>
+    <>
+      {/* ── Full-screen overlay (when a skill is open) ── */}
+      {openSkill && graph && graph.nodes.length > 0 && (
+        <SkillTreeOverlay
+          skill={openSkill}
+          graph={graph}
+          completedSet={completedSet}
+          onToggle={handleToggle}
+          onClose={() => setOpenSkill(null)}
+        />
+      )}
 
-      {/* ── Skill selector grid ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        {FEATURED_SKILLS.map(skill => {
-          const ex    = exByName[skill.name]
-          const isSel = selected === skill.name
-          return (
-            <button key={skill.name} onClick={() => setSelected(isSel ? null : skill.name)}
-              className={`p-4 rounded-xl text-center transition-all ${
-                isSel
-                  ? 'bg-white border-2 border-red-400 shadow-lg shadow-red-100 scale-[1.02]'
-                  : 'bg-white border border-border hover:shadow-md hover:border-red-200'
-              }`}>
-              <div className={`w-10 h-10 mx-auto bg-gradient-to-br ${skill.gradient} rounded-xl flex items-center justify-center text-xl shadow-sm mb-2`}>
-                {skill.icon}
-              </div>
-              <div className="text-xs font-bold text-dark leading-tight">{skill.name}</div>
-              {ex && (
-                <div className="flex items-center justify-center mt-1.5">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded ${
-                    ex.difficulty === 'beginner' ? 'bg-green-50 text-green-600' :
-                    ex.difficulty === 'intermediate' ? 'bg-amber-50 text-amber-600' :
-                    'bg-red-50 text-red-600'
-                  }`}>{ex.difficulty}</span>
+      {/* ── Skill selector page ── */}
+      <div>
+        <p className="text-sm text-muted mb-6">
+          Select a goal skill and unlock each progression step — complete prerequisites to advance.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {FEATURED_SKILLS.map(skill => {
+            const ex            = exByName[skill.name]
+            const graph         = ex ? buildGraph(ex, exercises, links) : null
+            const completedHere = graph ? graph.nodes.filter(n => completedSet.has(n.id)).length : 0
+            const totalHere     = graph ? graph.nodes.length : 0
+            const pctHere       = totalHere > 0 ? Math.round(completedHere / totalHere * 100) : 0
+
+            return (
+              <button key={skill.name} onClick={() => setOpenSkill(skill)}
+                className="p-4 rounded-xl text-center transition-all bg-white border border-border hover:shadow-md hover:border-red-200 hover:scale-[1.02] group">
+                <div className={`w-10 h-10 mx-auto bg-gradient-to-br ${skill.gradient} rounded-xl flex items-center justify-center text-xl shadow-sm mb-2`}>
+                  {skill.icon}
                 </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* ── Pyramid tree ── */}
-      {graph && graph.nodes.length > 0 && (
-        <div>
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <div>
-              <h2 className="text-base font-bold text-dark">{selected}</h2>
-              <p className="text-[11px] text-muted mt-0.5">
-                {completedCount} / {totalCount} steps completed
-                {totalCount > 0 && (
-                  <span className="ml-2 font-semibold text-accent">
-                    {Math.round((completedCount / totalCount) * 100)}%
-                  </span>
+                <div className="text-xs font-bold text-dark leading-tight mb-1.5">{skill.name}</div>
+                {ex && (
+                  <div className="flex items-center justify-center mb-2">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                      ex.difficulty === 'beginner' ? 'bg-green-50 text-green-600' :
+                      ex.difficulty === 'intermediate' ? 'bg-amber-50 text-amber-600' :
+                      'bg-red-50 text-red-600'
+                    }`}>{ex.difficulty}</span>
+                  </div>
                 )}
-              </p>
-            </div>
-            {/* Progress bar */}
-            <div className="flex-1 max-w-xs ml-4">
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-accent rounded-full transition-all duration-500"
-                  style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }} />
-              </div>
-            </div>
-            {/* Legend */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                <span className="text-[10px] text-dim">Done</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                <span className="text-[10px] text-dim">Available</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                <span className="text-[10px] text-dim">Locked</span>
-              </div>
-            </div>
-          </div>
-
-          <PyramidTree graph={graph} completedSet={completedSet} onToggle={handleToggle} />
-
-          <p className="text-[10px] text-dim text-center mt-3">
-            Click any node to view details and mark as complete · Progress saved locally
-          </p>
+                {/* Mini progress bar per skill */}
+                {totalHere > 0 && (
+                  <div>
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-1">
+                      <div className="h-full bg-accent rounded-full transition-all"
+                        style={{ width: `${pctHere}%` }} />
+                    </div>
+                    <span className="text-[9px] text-dim">{completedHere}/{totalHere} steps</span>
+                  </div>
+                )}
+              </button>
+            )
+          })}
         </div>
-      )}
-
-      {graph && graph.nodes.length === 0 && (
-        <div className="text-center py-10 bg-white border border-border rounded-2xl">
-          <p className="text-sm text-muted">No progression data found for this skill yet.</p>
-        </div>
-      )}
-
-      {!selected && (
-        <div className="text-center py-12 bg-white border border-border rounded-2xl">
-          <div className="text-4xl mb-3">🌳</div>
-          <h3 className="text-lg font-bold text-dark mb-1">Select a skill above</h3>
-          <p className="text-sm text-muted">Choose your goal — then unlock each step one by one</p>
-        </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }
