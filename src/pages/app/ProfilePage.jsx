@@ -1026,56 +1026,41 @@ export default function ProfilePage() {
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="text-muted">Loading...</div></div>
 
-  const NAV_ITEMS = [
-    { id: 'profile', icon: '👤', label: 'Profile' },
-    { id: 'stats', icon: '📊', label: 'Stats & Progress' },
-  ]
-
   return (
-    <div className="flex gap-5 items-start max-w-6xl">
+    <div className="flex gap-8" style={{ minHeight: 'calc(100vh - 160px)' }}>
 
-      {/* ── Sub-sidebar nav ── */}
-      <aside className="w-52 flex-shrink-0 sticky top-6">
-        <div className="bg-white border border-border rounded-2xl overflow-hidden">
+      {/* ── Left sidebar (Settings-style) ── */}
+      <div className="w-52 flex-shrink-0">
+        <div className="sticky top-0 pt-1">
+          <h1 className="text-xl font-black text-dark mb-6 px-3">Profile</h1>
 
-          {/* Mini profile card */}
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-surface rounded-full flex items-center justify-center text-xl overflow-hidden border border-border flex-shrink-0">
-                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" /> : '👤'}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-dark truncate">{profile?.username || 'Athlete'}</p>
-                <span className={`text-xs font-semibold ${league.color}`}>{league.emoji} {league.name}</span>
-              </div>
-            </div>
+          <div className="mb-5">
+            <p className="text-[10px] font-bold text-dim uppercase tracking-widest mb-1 px-3">Profile</p>
+            <button onClick={() => setActiveTab('profile')}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+                activeTab === 'profile' ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:text-dark hover:bg-surface'
+              }`}>
+              Account
+            </button>
           </div>
 
-          {/* Nav items */}
-          <nav className="p-2 space-y-0.5">
-            {NAV_ITEMS.map(item => (
-              <button key={item.id} onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left ${
-                  activeTab === item.id
-                    ? 'bg-surface border border-border text-dark font-semibold'
-                    : 'text-muted hover:bg-surface hover:text-dark border border-transparent'
-                }`}>
-                <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="mb-5">
+            <p className="text-[10px] font-bold text-dim uppercase tracking-widest mb-1 px-3">Progress</p>
+            <button onClick={() => setActiveTab('stats')}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+                activeTab === 'stats' ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:text-dark hover:bg-surface'
+              }`}>
+              Stats & Progress
+            </button>
+          </div>
 
-          {/* BMI / KFA */}
-          <div className="p-2 border-t border-border">
-            <button onClick={() => setShowMetricsModal(true)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-all border border-transparent">
-              <span className="text-base w-5 text-center flex-shrink-0">📏</span>
-              <span>BMI / KFA</span>
+          <div className="mt-8 px-3">
+            <button onClick={() => setShowMetricsModal(true)} className="text-xs text-red-500 hover:text-red-600 transition-colors">
+              📏 BMI / KFA
             </button>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* ── Main content ── */}
       <div className="flex-1 min-w-0">
