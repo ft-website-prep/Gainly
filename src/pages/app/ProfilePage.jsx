@@ -301,331 +301,194 @@ const DIET_TYPES = [
   { id: 'other', label: 'Other', emoji: '🍽️' },
 ]
 
-function NutritionPanel({ profile, onSave }) {
-  const hp = profile?.health_profile || {}
-  const [editing, setEditing] = useState(false)
-  const [dietType, setDietType] = useState('')
-  const [calories, setCalories] = useState('')
-  const [protein, setProtein] = useState('')
-  const [carbs, setCarbs] = useState('')
-  const [fat, setFat] = useState('')
-  const [fiber, setFiber] = useState('')
-  const [water, setWater] = useState('')
-  const [sleep, setSleep] = useState('')
-  const [vitaminD, setVitaminD] = useState('')
-  const [omega3, setOmega3] = useState('')
-  const [magnesium, setMagnesium] = useState('')
-  const [supplements, setSupplements] = useState('')
-  const [injuries, setInjuries] = useState('')
-  const [allergies, setAllergies] = useState('')
-  const [notes, setNotes] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const startEdit = () => {
-    const h = profile?.health_profile || {}
-    setDietType(h.diet_type || '')
-    setCalories(h.calories_target || '')
-    setProtein(h.protein_g || '')
-    setCarbs(h.carbs_g || '')
-    setFat(h.fat_g || '')
-    setFiber(h.fiber_g || '')
-    setWater(h.water_l || '')
-    setSleep(h.sleep_hours || '')
-    setVitaminD(h.vitamin_d_iu || '')
-    setOmega3(h.omega3_g || '')
-    setMagnesium(h.magnesium_mg || '')
-    setSupplements(h.supplements || '')
-    setInjuries(h.injuries || '')
-    setAllergies(h.allergies || '')
-    setNotes(h.notes || '')
-    setEditing(true)
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    await onSave({
-      health_profile: {
-        diet_type: dietType || null,
-        calories_target: calories ? +calories : null,
-        protein_g: protein ? +protein : null,
-        carbs_g: carbs ? +carbs : null,
-        fat_g: fat ? +fat : null,
-        fiber_g: fiber ? +fiber : null,
-        water_l: water ? +water : null,
-        sleep_hours: sleep ? +sleep : null,
-        vitamin_d_iu: vitaminD ? +vitaminD : null,
-        omega3_g: omega3 ? +omega3 : null,
-        magnesium_mg: magnesium ? +magnesium : null,
-        supplements: supplements || null,
-        injuries: injuries || null,
-        allergies: allergies || null,
-        notes: notes || null,
-      }
-    })
-    setSaving(false)
-    setEditing(false)
-  }
-
-  const dietInfo = DIET_TYPES.find(d => d.id === hp.diet_type)
-  const hasData = hp.diet_type || hp.calories_target || hp.protein_g || hp.injuries || hp.allergies || hp.supplements
-
-  const inp = 'w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-red-400'
-  const lbl = 'block text-[10px] font-medium text-dim mb-1'
-  const section = 'text-[10px] font-bold text-dim uppercase tracking-wider mb-2'
-
-  if (editing) return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-dark">Health & Nutrition</h3>
-        <button onClick={() => setEditing(false)} className="text-xs text-dim hover:text-dark">Cancel</button>
-      </div>
-      <div className="space-y-5">
-
-        {/* Diet type */}
-        <div>
-          <p className={section}>Diet Type</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {DIET_TYPES.map(d => (
-              <button key={d.id} onClick={() => setDietType(dietType === d.id ? '' : d.id)}
-                className={`px-2 py-2 rounded-xl text-xs text-left transition-colors border ${dietType === d.id ? 'border-red-300 bg-red-50 text-red-700 font-semibold' : 'border-border bg-surface text-muted hover:border-muted'}`}>
-                {d.emoji} {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Makros */}
-        <div>
-          <p className={section}>Macros (daily target)</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className={lbl}>Calories (kcal)</label><input type="number" value={calories} onChange={e => setCalories(e.target.value)} placeholder="2200" className={inp} /></div>
-            <div><label className={lbl}>Protein (g)</label><input type="number" value={protein} onChange={e => setProtein(e.target.value)} placeholder="160" className={inp} /></div>
-            <div><label className={lbl}>Carbs (g)</label><input type="number" value={carbs} onChange={e => setCarbs(e.target.value)} placeholder="250" className={inp} /></div>
-            <div><label className={lbl}>Fat (g)</label><input type="number" value={fat} onChange={e => setFat(e.target.value)} placeholder="65" className={inp} /></div>
-            <div><label className={lbl}>Fiber (g)</label><input type="number" value={fiber} onChange={e => setFiber(e.target.value)} placeholder="30" className={inp} /></div>
-          </div>
-        </div>
-
-        {/* Lifestyle */}
-        <div>
-          <p className={section}>Lifestyle</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className={lbl}>Water (L/day)</label><input type="number" step="0.1" value={water} onChange={e => setWater(e.target.value)} placeholder="2.5" className={inp} /></div>
-            <div><label className={lbl}>Sleep (h/night)</label><input type="number" step="0.5" value={sleep} onChange={e => setSleep(e.target.value)} placeholder="7.5" className={inp} /></div>
-          </div>
-        </div>
-
-        {/* Mikros */}
-        <div>
-          <p className={section}>Key Micronutrients</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className={lbl}>Vitamin D (IU/day)</label><input type="number" value={vitaminD} onChange={e => setVitaminD(e.target.value)} placeholder="2000" className={inp} /></div>
-            <div><label className={lbl}>Omega-3 (g/day)</label><input type="number" step="0.5" value={omega3} onChange={e => setOmega3(e.target.value)} placeholder="2" className={inp} /></div>
-            <div className="col-span-2"><label className={lbl}>Magnesium (mg/day)</label><input type="number" value={magnesium} onChange={e => setMagnesium(e.target.value)} placeholder="400" className={inp} /></div>
-          </div>
-        </div>
-
-        {/* Supplements */}
-        <div>
-          <label className={lbl}>Supplements</label>
-          <input type="text" value={supplements} onChange={e => setSupplements(e.target.value)} placeholder="e.g. Whey protein, Creatine, Vitamin C..." className={inp} />
-        </div>
-
-        {/* Gesundheit */}
-        <div>
-          <p className={section}>Health Info (for better coach advice)</p>
-          <div className="space-y-2">
-            <div><label className={lbl}>Injuries / Conditions</label><textarea value={injuries} onChange={e => setInjuries(e.target.value)} rows={2} placeholder="e.g. Left knee meniscus, lower back pain, shoulder impingement..." className={`${inp} resize-none`} /></div>
-            <div><label className={lbl}>Allergies / Intolerances</label><input type="text" value={allergies} onChange={e => setAllergies(e.target.value)} placeholder="e.g. Lactose, Gluten, Nuts..." className={inp} /></div>
-            <div><label className={lbl}>Notes for Coach</label><textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Anything else your coach should know..." className={`${inp} resize-none`} /></div>
-          </div>
-        </div>
-
-        <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent-hover disabled:opacity-50 transition-colors">
-          {saving ? 'Saving...' : 'Save Health Profile'}
-        </button>
-      </div>
-    </div>
-  )
-
-  // View mode
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-dark">Health & Nutrition</h3>
-        <button onClick={startEdit} className={`text-xs font-medium ${hasData ? 'text-red-500 hover:text-red-600' : 'text-accent hover:text-accent-hover'}`}>
-          {hasData ? 'Edit' : '+ Add'}
-        </button>
-      </div>
-      {!hasData ? (
-        <button onClick={startEdit}
-          className="w-full border-2 border-dashed border-border rounded-xl py-6 text-center hover:border-accent/40 hover:bg-accent-soft/30 transition-colors">
-          <div className="text-2xl mb-1.5">🥗</div>
-          <p className="text-xs text-muted font-medium">Add nutrition & health data</p>
-          <p className="text-[10px] text-dim mt-0.5">Helps the coach give better, personalized advice</p>
-        </button>
-      ) : (
-        <div className="space-y-3">
-          {dietInfo && (
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{dietInfo.emoji}</span>
-              <div>
-                <p className="text-xs font-semibold text-dark">{dietInfo.label}</p>
-                <p className="text-[10px] text-dim">Diet type</p>
-              </div>
-            </div>
-          )}
-
-          {/* Macro pills */}
-          {(hp.calories_target || hp.protein_g || hp.carbs_g || hp.fat_g) && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {hp.calories_target && <div className="bg-orange-50 rounded-xl p-2.5 text-center"><div className="text-sm font-black text-orange-600">{hp.calories_target}</div><div className="text-[9px] text-orange-400">kcal/day</div></div>}
-              {hp.protein_g && <div className="bg-red-50 rounded-xl p-2.5 text-center"><div className="text-sm font-black text-red-600">{hp.protein_g}g</div><div className="text-[9px] text-red-400">Protein</div></div>}
-              {hp.carbs_g && <div className="bg-amber-50 rounded-xl p-2.5 text-center"><div className="text-sm font-black text-amber-600">{hp.carbs_g}g</div><div className="text-[9px] text-amber-400">Carbs</div></div>}
-              {hp.fat_g && <div className="bg-blue-50 rounded-xl p-2.5 text-center"><div className="text-sm font-black text-blue-600">{hp.fat_g}g</div><div className="text-[9px] text-blue-400">Fat</div></div>}
-            </div>
-          )}
-
-          {/* Lifestyle badges */}
-          {(hp.water_l || hp.sleep_hours) && (
-            <div className="flex gap-3 flex-wrap">
-              {hp.water_l && <div className="flex items-center gap-1.5 text-xs text-muted bg-surface rounded-lg px-2.5 py-1.5"><span>💧</span>{hp.water_l}L/day</div>}
-              {hp.sleep_hours && <div className="flex items-center gap-1.5 text-xs text-muted bg-surface rounded-lg px-2.5 py-1.5"><span>😴</span>{hp.sleep_hours}h sleep</div>}
-            </div>
-          )}
-
-          {/* Micros / Supplements */}
-          {(hp.vitamin_d_iu || hp.omega3_g || hp.magnesium_mg || hp.supplements) && (
-            <div>
-              <p className="text-[10px] text-dim mb-1.5">Supplements & Micros</p>
-              <div className="flex flex-wrap gap-1.5">
-                {hp.vitamin_d_iu && <span className="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg px-2 py-1">☀️ Vit D {hp.vitamin_d_iu}IU</span>}
-                {hp.omega3_g && <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1">🐟 Ω-3 {hp.omega3_g}g</span>}
-                {hp.magnesium_mg && <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 rounded-lg px-2 py-1">🔮 Mg {hp.magnesium_mg}mg</span>}
-                {hp.supplements && <span className="text-[10px] text-muted bg-surface border border-border rounded-lg px-2 py-1 truncate max-w-full">{hp.supplements}</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Injuries warning */}
-          {hp.injuries && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-amber-700 mb-1">⚠️ Injuries / Conditions</p>
-              <p className="text-xs text-amber-700 leading-relaxed">{hp.injuries}</p>
-            </div>
-          )}
-
-          {/* Allergies */}
-          {hp.allergies && (
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-red-600 mb-1">🚫 Allergies</p>
-              <p className="text-xs text-red-600">{hp.allergies}</p>
-            </div>
-          )}
-
-          {/* Notes */}
-          {hp.notes && (
-            <div>
-              <p className="text-[10px] text-dim mb-1">Coach Notes</p>
-              <p className="text-xs text-muted italic">"{hp.notes}"</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+// =============================================
+// BODY DATA CATEGORY CONFIGS
+// =============================================
+const BODY_DATA_CATEGORIES = [
+  {
+    id: 'nutrition', emoji: '🥗', title: 'Nutrition & Macros',
+    description: 'Daily dietary targets and lifestyle',
+    source: 'hp',
+    fields: [
+      { key: 'diet_type', label: 'Diet Type', type: 'diet', info: 'Your primary dietary pattern helps the coach tailor nutrition and recipe advice.' },
+      { key: 'calories_target', label: 'Calories', unit: 'kcal/day', placeholder: '2200', info: 'Total daily energy target. Surplus = muscle gain, deficit = fat loss. Highly individual.' },
+      { key: 'protein_g', label: 'Protein', unit: 'g/day', placeholder: '160', info: 'Target 1.6–2.2g per kg bodyweight for muscle growth and recovery.' },
+      { key: 'carbs_g', label: 'Carbs', unit: 'g/day', placeholder: '250', info: 'Primary fuel for high-intensity training. Replenish glycogen post-workout.' },
+      { key: 'fat_g', label: 'Fat', unit: 'g/day', placeholder: '65', info: 'Essential for hormone production (especially testosterone). Minimum ~0.5g/kg.' },
+      { key: 'fiber_g', label: 'Fiber', unit: 'g/day', placeholder: '30', info: 'Supports gut health and steady energy. Target 25–35g/day.' },
+      { key: 'water_l', label: 'Water', unit: 'L/day', placeholder: '3', step: 0.1, info: 'Even 2% dehydration measurably reduces strength and endurance output.' },
+      { key: 'sleep_hours', label: 'Sleep', unit: 'h/night', placeholder: '8', step: 0.5, info: '7–9h is optimal for athletes. Growth hormone peaks during deep sleep.' },
+      { key: 'supplements', label: 'Supplements', type: 'text', placeholder: 'e.g. Creatine, Whey, Omega-3', info: 'Currently taken supplements — helps avoid redundant recommendations.' },
+      { key: 'injuries', label: 'Injuries / Conditions', type: 'textarea', placeholder: 'e.g. Left knee meniscus, lower back pain…', info: 'Active or chronic issues — the coach will avoid exercises that aggravate them.' },
+      { key: 'allergies', label: 'Allergies / Intolerances', type: 'text', placeholder: 'e.g. Lactose, Gluten, Nuts', info: 'Dietary restrictions for safe nutrition recommendations.' },
+      { key: 'notes', label: 'Coach Notes', type: 'textarea', placeholder: 'Anything else the coach should know…', info: 'Free-text context for the AI coach — goals, limitations, preferences.' },
+    ],
+  },
+  {
+    id: 'blood', emoji: '🩸', title: 'Blood Markers',
+    description: 'Iron, vitamins and blood cell values from lab results',
+    source: 'bm',
+    fields: [
+      { key: 'iron_ugdl', label: 'Iron', unit: 'µg/dL', placeholder: '100', info: 'Oxygen transport capacity. Low iron → fatigue, poor recovery, reduced VO2max.' },
+      { key: 'ferritin_ugl', label: 'Ferritin', unit: 'µg/L', placeholder: '80', info: 'Iron storage protein. More sensitive than serum iron. Optimal for athletes: >50 µg/L.' },
+      { key: 'hemoglobin_gdl', label: 'Hemoglobin', unit: 'g/dL', placeholder: '14.5', info: 'Oxygen carrier in red blood cells. Men: 13.5–17.5, Women: 12–15.5 g/dL.' },
+      { key: 'vitamin_d_ngml', label: 'Vitamin D', unit: 'ng/mL', placeholder: '40', info: 'Affects testosterone levels, bone density, immune function and mood. Optimal: 40–60 ng/mL.' },
+      { key: 'vitamin_b12_pmoll', label: 'Vitamin B12', unit: 'pmol/L', placeholder: '300', info: 'Nerve function and red blood cell formation. Vegans and endurance athletes often deficient.' },
+      { key: 'folate_nmoll', label: 'Folate', unit: 'nmol/L', placeholder: '15', info: 'Cell growth and DNA synthesis. Important for recovery and red blood cell production.' },
+    ],
+  },
+  {
+    id: 'hormones', emoji: '⚗️', title: 'Hormones',
+    description: 'Testosterone, cortisol, thyroid — from blood panel',
+    source: 'bm',
+    fields: [
+      { key: 'testosterone_nmoll', label: 'Testosterone', unit: 'nmol/L', placeholder: '15', info: 'Primary anabolic hormone. Drives muscle growth, libido, and energy. Men: 10–35, Women: 0.3–2.4 nmol/L.' },
+      { key: 'cortisol_nmoll', label: 'Cortisol', unit: 'nmol/L', placeholder: '400', info: 'Stress hormone. Chronically elevated cortisol breaks down muscle and impairs recovery.' },
+      { key: 'tsh_miull', label: 'TSH', unit: 'mIU/L', placeholder: '1.5', step: 0.01, info: 'Thyroid stimulating hormone. Controls metabolism. Optimal for athletes: 0.5–2.0 mIU/L.' },
+      { key: 'estradiol_pmoll', label: 'Estradiol', unit: 'pmol/L', placeholder: '80', info: 'Primary estrogen. Affects bone density, recovery, and mood. Present in all sexes.' },
+      { key: 'dhea_umoll', label: 'DHEA-S', unit: 'µmol/L', placeholder: '6', info: 'Precursor to sex hormones. Naturally declines with age. Linked to energy and wellbeing.' },
+      { key: 'insulin_miull', label: 'Insulin (fasting)', unit: 'mIU/L', placeholder: '5', step: 0.1, info: 'Regulates blood sugar. High fasting insulin signals insulin resistance and impaired fat burning.' },
+    ],
+  },
+  {
+    id: 'cardio', emoji: '❤️', title: 'Cardiovascular',
+    description: 'Heart rate, blood pressure, cholesterol',
+    source: 'bm',
+    fields: [
+      { key: 'resting_hr_bpm', label: 'Resting Heart Rate', unit: 'bpm', placeholder: '60', step: 1, info: 'Lower is better. Trained athletes: 40–60 bpm. High resting HR = poor fitness or overtraining.' },
+      { key: 'bp_systolic', label: 'Blood Pressure (sys)', unit: 'mmHg', placeholder: '120', step: 1, info: 'Systolic pressure (peak during heartbeat). Normal: <120 mmHg.' },
+      { key: 'bp_diastolic', label: 'Blood Pressure (dia)', unit: 'mmHg', placeholder: '80', step: 1, info: 'Diastolic pressure (between beats). Normal: <80 mmHg.' },
+      { key: 'cholesterol_total', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: '180', step: 1, info: 'HDL + LDL combined. Optimal <200 mg/dL. Context matters — high HDL is beneficial.' },
+      { key: 'cholesterol_hdl', label: 'HDL', unit: 'mg/dL', placeholder: '55', step: 1, info: '"Good" cholesterol. Removes cholesterol from arteries. Higher is better. <40 = risk factor.' },
+      { key: 'cholesterol_ldl', label: 'LDL', unit: 'mg/dL', placeholder: '110', step: 1, info: '"Bad" cholesterol. Builds up in arteries. Optimal for athletes: <100 mg/dL.' },
+      { key: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', placeholder: '100', step: 1, info: 'Blood fats. High levels linked to poor diet, excess carbs and insulin resistance. <150 = normal.' },
+    ],
+  },
+  {
+    id: 'metabolic', emoji: '🔬', title: 'Metabolic & Organ',
+    description: 'Glucose, kidney and liver markers',
+    source: 'bm',
+    fields: [
+      { key: 'glucose_mgdl', label: 'Fasting Glucose', unit: 'mg/dL', placeholder: '90', step: 1, info: 'Blood sugar after 8h fast. Normal: 70–99. Prediabetes: 100–125. Key for energy management.' },
+      { key: 'hba1c_pct', label: 'HbA1c', unit: '%', placeholder: '5.2', step: 0.1, info: '3-month average blood sugar. <5.7% = normal. Key long-term metabolic marker.' },
+      { key: 'creatinine_mgdl', label: 'Creatinine', unit: 'mg/dL', placeholder: '0.9', step: 0.01, info: 'Kidney function marker. Can be temporarily elevated after intense training — not necessarily a concern.' },
+      { key: 'uric_acid_mgdl', label: 'Uric Acid', unit: 'mg/dL', placeholder: '5.5', step: 0.1, info: 'Elevated with high protein diets or gout risk. High values can affect joint health.' },
+      { key: 'alt_ul', label: 'ALT', unit: 'U/L', placeholder: '25', step: 1, info: 'Liver enzyme. Often elevated after hard training in athletes — usually benign. Monitor trends.' },
+      { key: 'ast_ul', label: 'AST', unit: 'U/L', placeholder: '22', step: 1, info: 'Liver and muscle enzyme. Regularly elevated post-workout in strength athletes. Context is key.' },
+    ],
+  },
+  {
+    id: 'composition', emoji: '📐', title: 'Body Composition',
+    description: 'Circumference measurements',
+    source: 'bm',
+    fields: [
+      { key: 'waist_cm', label: 'Waist', unit: 'cm', placeholder: '80', step: 0.5, info: 'Key health indicator. Men: <94cm optimal. Women: <80cm optimal. Waist-to-hip ratio predicts cardiovascular risk.' },
+      { key: 'hip_cm', label: 'Hip', unit: 'cm', placeholder: '95', step: 0.5, info: 'Used for waist-to-hip ratio (WHR). WHR >0.9 (men) or >0.85 (women) = elevated cardiovascular risk.' },
+      { key: 'neck_cm', label: 'Neck', unit: 'cm', placeholder: '38', step: 0.5, info: 'Used in the US Navy body fat estimation formula. Larger neck with smaller waist = leaner composition.' },
+    ],
+  },
+]
 
 // =============================================
-// BIOMARKER CARD (reusable)
+// CATEGORY MODAL
 // =============================================
-function BiomarkerCard({ title, emoji, description, fields, values, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
-
-  const startEdit = () => {
+function CategoryModal({ config, values, onSave, onClose }) {
+  const [form, setForm] = useState(() => {
     const f = {}
-    fields.forEach(field => { f[field.key] = values?.[field.key] ?? '' })
-    setForm(f)
-    setEditing(true)
-  }
+    config.fields.forEach(field => { f[field.key] = values?.[field.key] ?? '' })
+    return f
+  })
+  const [saving, setSaving] = useState(false)
+  const [infoKey, setInfoKey] = useState(null)
 
   const handleSave = async () => {
     setSaving(true)
     const updates = {}
-    fields.forEach(field => { updates[field.key] = form[field.key] !== '' ? +form[field.key] : null })
+    config.fields.forEach(field => {
+      const v = form[field.key]
+      if (field.type === 'text' || field.type === 'textarea' || field.type === 'diet') {
+        updates[field.key] = v || null
+      } else {
+        updates[field.key] = v !== '' && v !== null && v !== undefined ? +v : null
+      }
+    })
     await onSave(updates)
     setSaving(false)
-    setEditing(false)
+    onClose()
   }
 
-  const hasData = fields.some(f => values?.[f.key] != null && values[f.key] !== '')
-
-  const inp = 'w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-red-400'
+  const inp = 'w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-dark text-sm focus:outline-none focus:border-red-400'
 
   return (
-    <div className="bg-white border border-border rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-1">
-        <h3 className="text-sm font-bold text-dark">{emoji} {title}</h3>
-        <button onClick={editing ? () => setEditing(false) : startEdit}
-          className="text-xs text-red-500 font-medium hover:text-red-600">
-          {editing ? 'Cancel' : hasData ? 'Edit' : '+ Add'}
-        </button>
-      </div>
-      <p className="text-[11px] text-dim mb-4">{description}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
 
-      {editing ? (
-        <div>
-          <div className="grid grid-cols-2 gap-3">
-            {fields.map(f => (
-              <div key={f.key} className={f.wide ? 'col-span-2' : ''}>
-                <label className="block text-[10px] text-dim mb-1">{f.label} <span className="text-dim/60">({f.unit})</span></label>
+        {/* Header */}
+        <div className="p-5 border-b border-border flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{config.emoji}</span>
+            <div>
+              <h3 className="font-bold text-dark text-sm">{config.title}</h3>
+              <p className="text-[11px] text-dim">{config.description}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-full hover:bg-surface flex items-center justify-center text-xl text-dim hover:text-dark transition-colors leading-none">×</button>
+        </div>
+
+        {/* Fields */}
+        <div className="overflow-y-auto p-5 space-y-4 flex-1">
+          {config.fields.map(f => (
+            <div key={f.key}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-xs font-medium text-muted">{f.label}</span>
+                {f.unit && <span className="text-[10px] text-dim">({f.unit})</span>}
+                {f.info && (
+                  <button
+                    onClick={() => setInfoKey(infoKey === f.key ? null : f.key)}
+                    className={`w-4 h-4 rounded-full border text-[9px] flex items-center justify-center flex-shrink-0 transition-colors font-bold ${
+                      infoKey === f.key ? 'bg-surface border-muted text-dark' : 'border-dim/50 text-dim hover:border-muted hover:text-muted'
+                    }`}
+                  >i</button>
+                )}
+              </div>
+              {infoKey === f.key && (
+                <div className="mb-2 text-[11px] text-muted bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 leading-relaxed">
+                  {f.info}
+                </div>
+              )}
+              {f.type === 'diet' ? (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {DIET_TYPES.map(d => (
+                    <button key={d.id} onClick={() => setForm(p => ({ ...p, [f.key]: p[f.key] === d.id ? '' : d.id }))}
+                      className={`px-2 py-2 rounded-xl text-xs text-left transition-colors border ${form[f.key] === d.id ? 'border-red-300 bg-red-50 text-red-700 font-semibold' : 'border-border bg-surface text-muted hover:border-muted'}`}>
+                      {d.emoji} {d.label}
+                    </button>
+                  ))}
+                </div>
+              ) : f.type === 'textarea' ? (
+                <textarea value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  rows={2} placeholder={f.placeholder} className={`${inp} resize-none`} />
+              ) : f.type === 'text' ? (
+                <input type="text" value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder} className={inp} />
+              ) : (
                 <input type="number" step={f.step ?? 0.1} value={form[f.key]}
                   onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                   placeholder={f.placeholder} className={inp} />
-              </div>
-            ))}
-          </div>
-          <button onClick={handleSave} disabled={saving}
-            className="mt-4 w-full py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-hover disabled:opacity-50 transition-colors">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      ) : !hasData ? (
-        <button onClick={startEdit}
-          className="w-full border-2 border-dashed border-border rounded-xl py-5 text-center hover:border-red-200 hover:bg-red-50/30 transition-colors">
-          <p className="text-xs text-dim">Optional — click to add</p>
-        </button>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {fields.filter(f => values?.[f.key] != null).map(f => (
-            <div key={f.key} className="bg-surface rounded-xl p-3">
-              <div className="text-sm font-bold text-dark">{values[f.key]}</div>
-              <div className="text-[10px] text-dim mt-0.5">{f.label}</div>
-              <div className="text-[9px] text-dim/70">{f.unit}</div>
+              )}
             </div>
           ))}
         </div>
-      )}
-    </div>
-  )
-}
 
-// Body Composition (right column card)
-function BodyCompositionCard({ values, onSave }) {
-  const fields = [
-    { key: 'waist_cm', label: 'Waist', unit: 'cm', placeholder: '80', step: 0.5 },
-    { key: 'hip_cm', label: 'Hip', unit: 'cm', placeholder: '95', step: 0.5 },
-    { key: 'neck_cm', label: 'Neck', unit: 'cm', placeholder: '38', step: 0.5 },
-  ]
-  return (
-    <BiomarkerCard
-      title="Body Composition" emoji="📐"
-      description="Circumference measurements"
-      fields={fields} values={values} onSave={onSave}
-    />
+        {/* Footer */}
+        <div className="p-4 border-t border-border flex-shrink-0">
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-3 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent-hover disabled:opacity-50 transition-colors">
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1021,6 +884,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('profile')
+  const [openCategoryId, setOpenCategoryId] = useState(null)
   const [editMode, setEditMode] = useState(false)
   const [showBodyModal, setShowBodyModal] = useState(false)
   const [showMetricsModal, setShowMetricsModal] = useState(false)
@@ -1248,107 +1112,82 @@ export default function ProfilePage() {
 
       {/* ============ BODY DATA TAB ============ */}
       {activeTab === 'bodydata' && (() => {
-        const bm = profile?.health_profile?.biomarkers || {}
+        const hp = profile?.health_profile || {}
+        const bm = hp.biomarkers || {}
+
+        const openConfig = BODY_DATA_CATEGORIES.find(c => c.id === openCategoryId)
+        const getValues = (cat) => cat.source === 'hp' ? hp : bm
+        const getHandler = (cat) => cat.source === 'hp' ? handleSaveHealthProfile : handleSaveBiomarkers
+        const filledCount = (cat) => cat.fields.filter(f => {
+          const v = getValues(cat)[f.key]
+          return v !== null && v !== undefined && v !== ''
+        }).length
+
         return (
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
-            {/* LEFT: metrics + biomarkers */}
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-black text-dark">Body Data</h2>
-                <p className="text-sm text-muted mt-1">Physical measurements and health markers — used by the coach for personalized advice</p>
-              </div>
-
-              {/* Basic metrics */}
-              <div className="bg-white border border-border rounded-2xl p-6">
-                <BodyDataPanel profile={profile} onSave={handleSaveBodyData} />
-              </div>
-
-              {/* Nutrition & macros */}
-              <div className="bg-white border border-border rounded-2xl p-6">
-                <NutritionPanel profile={profile} onSave={handleSaveHealthProfile} />
-              </div>
-
-              {/* Blood Markers */}
-              <BiomarkerCard
-                title="Blood Markers" emoji="🩸"
-                description="Iron, vitamins and blood cell values from lab results"
-                fields={[
-                  { key: 'iron_ugdl', label: 'Iron', unit: 'µg/dL', placeholder: '100' },
-                  { key: 'ferritin_ugl', label: 'Ferritin', unit: 'µg/L', placeholder: '80' },
-                  { key: 'hemoglobin_gdl', label: 'Hemoglobin', unit: 'g/dL', placeholder: '14.5' },
-                  { key: 'vitamin_d_ngml', label: 'Vitamin D', unit: 'ng/mL', placeholder: '40' },
-                  { key: 'vitamin_b12_pmoll', label: 'Vitamin B12', unit: 'pmol/L', placeholder: '300' },
-                  { key: 'folate_nmoll', label: 'Folate', unit: 'nmol/L', placeholder: '15' },
-                ]}
-                values={bm}
-                onSave={handleSaveBiomarkers}
+          <>
+            {openConfig && (
+              <CategoryModal
+                config={openConfig}
+                values={getValues(openConfig)}
+                onSave={getHandler(openConfig)}
+                onClose={() => setOpenCategoryId(null)}
               />
+            )}
 
-              {/* Hormones */}
-              <BiomarkerCard
-                title="Hormones" emoji="⚗️"
-                description="Testosterone, cortisol, thyroid — from blood panel"
-                fields={[
-                  { key: 'testosterone_nmoll', label: 'Testosterone', unit: 'nmol/L', placeholder: '15' },
-                  { key: 'cortisol_nmoll', label: 'Cortisol', unit: 'nmol/L', placeholder: '400' },
-                  { key: 'tsh_miull', label: 'TSH', unit: 'mIU/L', placeholder: '1.5', step: 0.01 },
-                  { key: 'estradiol_pmoll', label: 'Estradiol', unit: 'pmol/L', placeholder: '80' },
-                  { key: 'dhea_umoll', label: 'DHEA-S', unit: 'µmol/L', placeholder: '6' },
-                  { key: 'insulin_miull', label: 'Insulin', unit: 'mIU/L', placeholder: '5', step: 0.1 },
-                ]}
-                values={bm}
-                onSave={handleSaveBiomarkers}
-              />
-
-              {/* Cardiovascular */}
-              <BiomarkerCard
-                title="Cardiovascular" emoji="❤️"
-                description="Heart rate, blood pressure, cholesterol"
-                fields={[
-                  { key: 'resting_hr_bpm', label: 'Resting HR', unit: 'bpm', placeholder: '60', step: 1 },
-                  { key: 'bp_systolic', label: 'BP Systolic', unit: 'mmHg', placeholder: '120', step: 1 },
-                  { key: 'bp_diastolic', label: 'BP Diastolic', unit: 'mmHg', placeholder: '80', step: 1 },
-                  { key: 'cholesterol_total', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: '180', step: 1 },
-                  { key: 'cholesterol_hdl', label: 'HDL', unit: 'mg/dL', placeholder: '55', step: 1 },
-                  { key: 'cholesterol_ldl', label: 'LDL', unit: 'mg/dL', placeholder: '110', step: 1 },
-                  { key: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', placeholder: '100', step: 1 },
-                ]}
-                values={bm}
-                onSave={handleSaveBiomarkers}
-              />
-
-              {/* Metabolic */}
-              <BiomarkerCard
-                title="Metabolic & Organ" emoji="🔬"
-                description="Glucose, kidney and liver markers"
-                fields={[
-                  { key: 'glucose_mgdl', label: 'Fasting Glucose', unit: 'mg/dL', placeholder: '90', step: 1 },
-                  { key: 'hba1c_pct', label: 'HbA1c', unit: '%', placeholder: '5.2', step: 0.1 },
-                  { key: 'creatinine_mgdl', label: 'Creatinine', unit: 'mg/dL', placeholder: '0.9', step: 0.01 },
-                  { key: 'uric_acid_mgdl', label: 'Uric Acid', unit: 'mg/dL', placeholder: '5.5', step: 0.1 },
-                  { key: 'alt_ul', label: 'ALT', unit: 'U/L', placeholder: '25', step: 1 },
-                  { key: 'ast_ul', label: 'AST', unit: 'U/L', placeholder: '22', step: 1 },
-                ]}
-                values={bm}
-                onSave={handleSaveBiomarkers}
-              />
-            </div>
-
-            {/* RIGHT: gauges + body composition */}
-            <div className="space-y-4 xl:sticky xl:top-6">
-              <div className="bg-white border border-border rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-dark mb-3">BMI</h3>
-                <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
-              </div>
-              {profile?.body_fat_pct && (
-                <div className="bg-white border border-border rounded-2xl p-5">
-                  <h3 className="text-sm font-bold text-dark mb-3">Body Fat %</h3>
-                  <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
+              {/* LEFT: unified card */}
+              <div className="bg-white border border-border rounded-2xl overflow-hidden">
+                {/* Basic metrics */}
+                <div className="p-6 border-b border-border">
+                  <BodyDataPanel profile={profile} onSave={handleSaveBodyData} />
                 </div>
-              )}
-              <BodyCompositionCard values={bm} onSave={handleSaveBiomarkers} />
+
+                {/* Category tiles */}
+                <div className="p-6">
+                  <p className="text-xs font-bold text-dim uppercase tracking-widest mb-4">Health & Lab Data</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {BODY_DATA_CATEGORIES.map(cat => {
+                      const filled = filledCount(cat)
+                      const total = cat.fields.length
+                      const hasSome = filled > 0
+                      return (
+                        <button key={cat.id} onClick={() => setOpenCategoryId(cat.id)}
+                          className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all hover:shadow-sm group ${
+                            hasSome
+                              ? 'border-border bg-surface hover:border-red-200 hover:bg-red-50/30'
+                              : 'border-dashed border-border hover:border-red-200 hover:bg-red-50/20'
+                          }`}>
+                          <div className="flex items-center justify-between w-full mb-2">
+                            <span className="text-xl">{cat.emoji}</span>
+                            {hasSome
+                              ? <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5">{filled}/{total}</span>
+                              : <span className="text-[10px] text-dim">+ Add</span>
+                            }
+                          </div>
+                          <p className="text-xs font-semibold text-dark group-hover:text-accent leading-snug">{cat.title}</p>
+                          <p className="text-[10px] text-dim mt-0.5 leading-snug">{cat.description}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT: gauges */}
+              <div className="space-y-4 xl:sticky xl:top-6">
+                <div className="bg-white border border-border rounded-2xl p-5">
+                  <h3 className="text-sm font-bold text-dark mb-3">BMI</h3>
+                  <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
+                </div>
+                {profile?.body_fat_pct && (
+                  <div className="bg-white border border-border rounded-2xl p-5">
+                    <h3 className="text-sm font-bold text-dark mb-3">Body Fat %</h3>
+                    <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )
       })()}
 
