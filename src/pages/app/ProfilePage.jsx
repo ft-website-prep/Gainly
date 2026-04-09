@@ -1134,57 +1134,54 @@ export default function ProfilePage() {
               />
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
-              {/* LEFT: unified card */}
-              <div className="bg-white border border-border rounded-2xl overflow-hidden">
-                {/* Basic metrics */}
-                <div className="p-6 border-b border-border">
+            <div className="bg-white border border-border rounded-2xl overflow-hidden">
+              {/* Basic metrics + gauges side by side */}
+              <div className="p-6 border-b border-border">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
                   <BodyDataPanel profile={profile} onSave={handleSaveBodyData} />
-                </div>
-
-                {/* Category tiles */}
-                <div className="p-6">
-                  <p className="text-xs font-bold text-dim uppercase tracking-widest mb-4">Health & Lab Data</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {BODY_DATA_CATEGORIES.map(cat => {
-                      const filled = filledCount(cat)
-                      const total = cat.fields.length
-                      const hasSome = filled > 0
-                      return (
-                        <button key={cat.id} onClick={() => setOpenCategoryId(cat.id)}
-                          className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all hover:shadow-sm group ${
-                            hasSome
-                              ? 'border-border bg-surface hover:border-red-200 hover:bg-red-50/30'
-                              : 'border-dashed border-border hover:border-red-200 hover:bg-red-50/20'
-                          }`}>
-                          <div className="flex items-center justify-between w-full mb-2">
-                            <span className="text-xl">{cat.emoji}</span>
-                            {hasSome
-                              ? <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5">{filled}/{total}</span>
-                              : <span className="text-[10px] text-dim">+ Add</span>
-                            }
-                          </div>
-                          <p className="text-xs font-semibold text-dark group-hover:text-accent leading-snug">{cat.title}</p>
-                          <p className="text-[10px] text-dim mt-0.5 leading-snug">{cat.description}</p>
-                        </button>
-                      )
-                    })}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xs font-bold text-dim uppercase tracking-widest mb-3">BMI</h3>
+                      <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
+                    </div>
+                    {profile?.body_fat_pct && (
+                      <div>
+                        <h3 className="text-xs font-bold text-dim uppercase tracking-widest mb-3">Body Fat %</h3>
+                        <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* RIGHT: gauges */}
-              <div className="space-y-4 xl:sticky xl:top-6">
-                <div className="bg-white border border-border rounded-2xl p-5">
-                  <h3 className="text-sm font-bold text-dark mb-3">BMI</h3>
-                  <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
+              {/* Category tiles */}
+              <div className="p-6">
+                <p className="text-xs font-bold text-dim uppercase tracking-widest mb-4">Health & Lab Data</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {BODY_DATA_CATEGORIES.map(cat => {
+                    const filled = filledCount(cat)
+                    const total = cat.fields.length
+                    const hasSome = filled > 0
+                    return (
+                      <button key={cat.id} onClick={() => setOpenCategoryId(cat.id)}
+                        className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all hover:shadow-sm group ${
+                          hasSome
+                            ? 'border-border bg-surface hover:border-red-200 hover:bg-red-50/30'
+                            : 'border-dashed border-border hover:border-red-200 hover:bg-red-50/20'
+                        }`}>
+                        <div className="flex items-center justify-between w-full mb-2">
+                          <span className="text-xl">{cat.emoji}</span>
+                          {hasSome
+                            ? <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5">{filled}/{total}</span>
+                            : <span className="text-[10px] text-dim">+ Add</span>
+                          }
+                        </div>
+                        <p className="text-xs font-semibold text-dark group-hover:text-accent leading-snug">{cat.title}</p>
+                        <p className="text-[10px] text-dim mt-0.5 leading-snug">{cat.description}</p>
+                      </button>
+                    )
+                  })}
                 </div>
-                {profile?.body_fat_pct && (
-                  <div className="bg-white border border-border rounded-2xl p-5">
-                    <h3 className="text-sm font-bold text-dark mb-3">Body Fat %</h3>
-                    <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
-                  </div>
-                )}
               </div>
             </div>
           </>
