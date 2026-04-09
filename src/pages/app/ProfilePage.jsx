@@ -538,6 +538,98 @@ function NutritionPanel({ profile, onSave }) {
 }
 
 // =============================================
+// BIOMARKER CARD (reusable)
+// =============================================
+function BiomarkerCard({ title, emoji, description, fields, values, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({})
+  const [saving, setSaving] = useState(false)
+
+  const startEdit = () => {
+    const f = {}
+    fields.forEach(field => { f[field.key] = values?.[field.key] ?? '' })
+    setForm(f)
+    setEditing(true)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const updates = {}
+    fields.forEach(field => { updates[field.key] = form[field.key] !== '' ? +form[field.key] : null })
+    await onSave(updates)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  const hasData = fields.some(f => values?.[f.key] != null && values[f.key] !== '')
+
+  const inp = 'w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-dark text-xs focus:outline-none focus:border-red-400'
+
+  return (
+    <div className="bg-white border border-border rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold text-dark">{emoji} {title}</h3>
+        <button onClick={editing ? () => setEditing(false) : startEdit}
+          className="text-xs text-red-500 font-medium hover:text-red-600">
+          {editing ? 'Cancel' : hasData ? 'Edit' : '+ Add'}
+        </button>
+      </div>
+      <p className="text-[11px] text-dim mb-4">{description}</p>
+
+      {editing ? (
+        <div>
+          <div className="grid grid-cols-2 gap-3">
+            {fields.map(f => (
+              <div key={f.key} className={f.wide ? 'col-span-2' : ''}>
+                <label className="block text-[10px] text-dim mb-1">{f.label} <span className="text-dim/60">({f.unit})</span></label>
+                <input type="number" step={f.step ?? 0.1} value={form[f.key]}
+                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder} className={inp} />
+              </div>
+            ))}
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="mt-4 w-full py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-hover disabled:opacity-50 transition-colors">
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      ) : !hasData ? (
+        <button onClick={startEdit}
+          className="w-full border-2 border-dashed border-border rounded-xl py-5 text-center hover:border-red-200 hover:bg-red-50/30 transition-colors">
+          <p className="text-xs text-dim">Optional — click to add</p>
+        </button>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {fields.filter(f => values?.[f.key] != null).map(f => (
+            <div key={f.key} className="bg-surface rounded-xl p-3">
+              <div className="text-sm font-bold text-dark">{values[f.key]}</div>
+              <div className="text-[10px] text-dim mt-0.5">{f.label}</div>
+              <div className="text-[9px] text-dim/70">{f.unit}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Body Composition (right column card)
+function BodyCompositionCard({ values, onSave }) {
+  const fields = [
+    { key: 'waist_cm', label: 'Waist', unit: 'cm', placeholder: '80', step: 0.5 },
+    { key: 'hip_cm', label: 'Hip', unit: 'cm', placeholder: '95', step: 0.5 },
+    { key: 'neck_cm', label: 'Neck', unit: 'cm', placeholder: '38', step: 0.5 },
+  ]
+  return (
+    <BiomarkerCard
+      title="Body Composition" emoji="📐"
+      description="Circumference measurements"
+      fields={fields} values={values} onSave={onSave}
+    />
+  )
+}
+
+// =============================================
 // DATE RANGE PICKER
 // =============================================
 function DateRangePicker({ range, onChange }) {
@@ -1019,6 +1111,12 @@ export default function ProfilePage() {
   const handleSaveBodyData = async (d) => { await supabase.from('profiles').update(d).eq('id', user.id); await loadProfile() }
   const handleSaveMetrics = async (d) => { await supabase.from('profiles').update(d).eq('id', user.id); await loadProfile() }
   const handleSaveHealthProfile = async (d) => { await supabase.from('profiles').update(d).eq('id', user.id); await loadProfile() }
+  const handleSaveBiomarkers = async (updates) => {
+    const current = profile?.health_profile || {}
+    const merged = { ...current, biomarkers: { ...(current.biomarkers || {}), ...updates } }
+    await supabase.from('profiles').update({ health_profile: merged }).eq('id', user.id)
+    await loadProfile()
+  }
   const handleAddProgress = async (e) => { await supabase.from('progress_timeline').insert({ user_id: user.id, ...e }); await loadTimeline() }
   const handleDeleteProgress = async (id) => { await supabase.from('progress_timeline').delete().eq('id', id); await loadTimeline() }
 
@@ -1036,12 +1134,17 @@ export default function ProfilePage() {
 
           <div className="mb-5">
             <p className="text-[10px] font-bold text-dim uppercase tracking-widest mb-1 px-3">Profile</p>
-            <button onClick={() => setActiveTab('profile')}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
-                activeTab === 'profile' ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:text-dark hover:bg-surface'
-              }`}>
-              Account
-            </button>
+            {[
+              { id: 'profile', label: 'Account' },
+              { id: 'bodydata', label: 'Body Data' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+                  activeTab === item.id ? 'bg-surface border border-border text-dark font-semibold' : 'text-muted hover:text-dark hover:bg-surface'
+                }`}>
+                {item.label}
+              </button>
+            ))}
           </div>
 
           <div className="mb-5">
@@ -1053,12 +1156,6 @@ export default function ProfilePage() {
               Stats & Progress
             </button>
           </div>
-
-          <div className="mt-8 px-3">
-            <button onClick={() => setShowMetricsModal(true)} className="text-xs text-red-500 hover:text-red-600 transition-colors">
-              📏 BMI / KFA
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1066,146 +1163,194 @@ export default function ProfilePage() {
       <div className="flex-1 min-w-0">
         {message && <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium ${message.startsWith('Error') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-600 border border-green-200'}`}>{message}</div>}
 
-      {/* ============ PROFILE TAB ============ */}
+      {/* ============ ACCOUNT TAB ============ */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6 items-start">
-          {/* LEFT COLUMN */}
-          <div className="space-y-6">
-            {/* Personal Info */}
-            <div className="bg-white border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-dark">Personal Info</h2>
-                {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-red-500 hover:text-red-600 text-sm font-medium">Edit</button>}
+        <div className="space-y-6 max-w-2xl">
+          {/* Personal Info */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-dark">Personal Info</h2>
+              {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-red-500 hover:text-red-600 text-sm font-medium">Edit</button>}
+            </div>
+            {editMode ? (
+              <div className="space-y-4">
+                <AvatarUpload value={avatarUrl} onChange={setAvatarUrl} userId={user?.id} />
+                <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
+                <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
+                <div className="flex gap-3">
+                  {profile?.username && <button onClick={() => { setEditMode(false); setUsername(profile.username || ''); setAvatarUrl(profile.avatar_url || ''); setBio(profile.bio || '') }} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>}
+                  <button onClick={handleSaveProfile} disabled={saving} className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+                </div>
               </div>
-
-              {editMode ? (
-                <div className="space-y-4">
-                  <AvatarUpload value={avatarUrl} onChange={setAvatarUrl} userId={user?.id} />
-                  <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
-                  <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
-                  <div className="flex gap-3">
-                    {profile?.username && <button onClick={() => { setEditMode(false); setUsername(profile.username || ''); setAvatarUrl(profile.avatar_url || ''); setBio(profile.bio || '') }} className="flex-1 py-3 rounded-xl border border-border text-muted text-sm font-medium">Cancel</button>}
-                    <button onClick={handleSaveProfile} disabled={saving} className="flex-1 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
+            ) : (
+              <div className="flex items-start gap-5">
+                <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center text-4xl overflow-hidden border-2 border-border flex-shrink-0">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" /> : '👤'}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-xl font-black text-dark">{profile?.username || 'No username'}</h3>
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${league.bg} ${league.color}`}>{league.emoji} {league.name}</span>
                   </div>
+                  <div className="text-sm text-muted mt-1">{[profile?.gender && profile.gender !== 'prefer_not_to_say' ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : null, calcAge(profile?.birth_date) ? `${calcAge(profile.birth_date)} years` : null, profile?.fitness_level ? profile.fitness_level.charAt(0).toUpperCase() + profile.fitness_level.slice(1) : null].filter(Boolean).join(' · ') || 'No info set'}</div>
+                  {profile?.bio && <p className="text-sm text-muted mt-2 italic">"{profile.bio}"</p>}
+                  {league.next && (
+                    <div className="mt-3"><div className="flex justify-between text-xs mb-1"><span className="text-muted">{league.emoji} {league.name}</span><span className="text-muted">{league.next.emoji} {league.next.name}</span></div><div className="h-2 bg-surface rounded-full overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{ width: `${Math.min(((profile?.xp_total || 0) - league.min) / (league.next.min - league.min) * 100, 100)}%` }} /></div><div className="text-xs text-dim mt-1">{profile?.xp_total || 0} / {league.next.min} XP</div></div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-start gap-5">
-                  <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center text-4xl overflow-hidden border-2 border-border flex-shrink-0">{profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" /> : '👤'}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="text-xl font-black text-dark">{profile?.username || 'No username'}</h3>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${league.bg} ${league.color}`}>{league.emoji} {league.name}</span>
-                    </div>
-                    <div className="text-sm text-muted mt-1">{[profile?.gender && profile.gender !== 'prefer_not_to_say' ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : null, calcAge(profile?.birth_date) ? `${calcAge(profile.birth_date)} years` : null, profile?.fitness_level ? profile.fitness_level.charAt(0).toUpperCase() + profile.fitness_level.slice(1) : null].filter(Boolean).join(' · ') || 'No info set'}</div>
-                    {profile?.bio && <p className="text-sm text-muted mt-2 italic">"{profile.bio}"</p>}
-                    {league.next && (
-                      <div className="mt-3"><div className="flex justify-between text-xs mb-1"><span className="text-muted">{league.emoji} {league.name}</span><span className="text-muted">{league.next.emoji} {league.next.name}</span></div><div className="h-2 bg-surface rounded-full overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{ width: `${Math.min(((profile?.xp_total || 0) - league.min) / (league.next.min - league.min) * 100, 100)}%` }} /></div><div className="text-xs text-dim mt-1">{profile?.xp_total || 0} / {league.next.min} XP</div></div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Progress Timeline (Photos/Videos only) */}
-            <div className="bg-white border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-dark">Progress Timeline</h2>
-                <button onClick={() => setShowProgressModal(true)}
-                  className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">+ Add Photo</button>
-              </div>
-              <PhotoTimeline entries={timeline} onDelete={handleDeleteProgress} />
-            </div>
-
-            {/* Google Calendar */}
-            <div className="bg-white border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold text-dark">📅 Google Calendar</h2>
-                  <p className="text-xs text-muted mt-0.5">Dein Trainingsplan direkt im Profil</p>
-                </div>
-                <button
-                  onClick={() => { setShowCalendarEdit(e => !e); setCalendarInput(calendarUrl) }}
-                  className="text-red-500 hover:text-red-600 text-xs font-semibold transition-colors">
-                  {calendarUrl ? 'Bearbeiten' : 'Verknüpfen'}
-                </button>
-              </div>
-
-              {showCalendarEdit && (
-                <div className="mb-5 space-y-3 bg-surface rounded-xl p-4 border border-border">
-                  <p className="text-xs text-muted leading-relaxed">
-                    <strong className="text-dark">So geht's:</strong> Google Calendar öffnen → Einstellungen → deinen Kalender auswählen → "In andere Apps einbetten" → die <code className="bg-white px-1 py-0.5 rounded text-[10px] border border-border">src</code>-URL aus dem iframe-Code kopieren.
-                  </p>
-                  <input type="url" value={calendarInput} onChange={e => setCalendarInput(e.target.value)}
-                    placeholder="https://calendar.google.com/calendar/embed?src=..."
-                    className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { setCalendarUrl(calendarInput); localStorage.setItem('gainly_gcal_url', calendarInput); setShowCalendarEdit(false) }}
-                      disabled={!calendarInput.trim()}
-                      className="flex-1 py-2.5 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 disabled:opacity-30 transition-all">
-                      Speichern
-                    </button>
-                    {calendarUrl && (
-                      <button
-                        onClick={() => { setCalendarUrl(''); setCalendarInput(''); localStorage.removeItem('gainly_gcal_url'); setShowCalendarEdit(false) }}
-                        className="px-4 py-2.5 border border-border rounded-xl text-xs text-muted hover:text-red-500 hover:border-red-200 transition-all">
-                        Entfernen
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {calendarUrl ? (
-                <div className="rounded-xl overflow-hidden border border-border">
-                  <iframe
-                    src={calendarUrl}
-                    style={{ border: 0 }}
-                    width="100%"
-                    height="600"
-                    frameBorder="0"
-                    scrolling="no"
-                    title="Google Calendar"
-                  />
-                </div>
-              ) : !showCalendarEdit && (
-                <div className="text-center py-10 border-2 border-dashed border-border rounded-xl">
-                  <div className="text-4xl mb-3">📅</div>
-                  <p className="text-sm text-muted font-medium">Noch kein Kalender verknüpft</p>
-                  <p className="text-xs text-dim mt-1">Klicke auf "Verknüpfen" um deinen Google Kalender einzubetten</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="space-y-4 xl:sticky xl:top-6">
-            {/* Body Data */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <BodyDataPanel profile={profile} onSave={handleSaveBodyData} />
-            </div>
-
-            {/* BMI */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-dark mb-3">BMI</h3>
-              <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
-            </div>
-
-            {/* KFA */}
-            {profile?.body_fat_pct && (
-              <div className="bg-white border border-border rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-dark mb-3">Body Fat %</h3>
-                <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
               </div>
             )}
+          </div>
 
-            {/* Health & Nutrition */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <NutritionPanel profile={profile} onSave={handleSaveHealthProfile} />
+          {/* Progress Timeline */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-dark">Progress Timeline</h2>
+              <button onClick={() => setShowProgressModal(true)} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100">+ Add Photo</button>
             </div>
+            <PhotoTimeline entries={timeline} onDelete={handleDeleteProgress} />
+          </div>
+
+          {/* Google Calendar */}
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-bold text-dark">📅 Google Calendar</h2>
+                <p className="text-xs text-muted mt-0.5">Dein Trainingsplan direkt im Profil</p>
+              </div>
+              <button onClick={() => { setShowCalendarEdit(e => !e); setCalendarInput(calendarUrl) }}
+                className="text-red-500 hover:text-red-600 text-xs font-semibold transition-colors">
+                {calendarUrl ? 'Bearbeiten' : 'Verknüpfen'}
+              </button>
+            </div>
+            {showCalendarEdit && (
+              <div className="mb-5 space-y-3 bg-surface rounded-xl p-4 border border-border">
+                <p className="text-xs text-muted leading-relaxed"><strong className="text-dark">So geht's:</strong> Google Calendar öffnen → Einstellungen → deinen Kalender auswählen → "In andere Apps einbetten" → die <code className="bg-white px-1 py-0.5 rounded text-[10px] border border-border">src</code>-URL aus dem iframe-Code kopieren.</p>
+                <input type="url" value={calendarInput} onChange={e => setCalendarInput(e.target.value)} placeholder="https://calendar.google.com/calendar/embed?src=..." className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
+                <div className="flex gap-2">
+                  <button onClick={() => { setCalendarUrl(calendarInput); localStorage.setItem('gainly_gcal_url', calendarInput); setShowCalendarEdit(false) }} disabled={!calendarInput.trim()} className="flex-1 py-2.5 bg-dark text-white rounded-xl text-xs font-bold hover:bg-red-600 disabled:opacity-30 transition-all">Speichern</button>
+                  {calendarUrl && <button onClick={() => { setCalendarUrl(''); setCalendarInput(''); localStorage.removeItem('gainly_gcal_url'); setShowCalendarEdit(false) }} className="px-4 py-2.5 border border-border rounded-xl text-xs text-muted hover:text-red-500 hover:border-red-200 transition-all">Entfernen</button>}
+                </div>
+              </div>
+            )}
+            {calendarUrl ? (
+              <div className="rounded-xl overflow-hidden border border-border">
+                <iframe src={calendarUrl} style={{ border: 0 }} width="100%" height="600" frameBorder="0" scrolling="no" title="Google Calendar" />
+              </div>
+            ) : !showCalendarEdit && (
+              <div className="text-center py-10 border-2 border-dashed border-border rounded-xl">
+                <div className="text-4xl mb-3">📅</div>
+                <p className="text-sm text-muted font-medium">Noch kein Kalender verknüpft</p>
+                <p className="text-xs text-dim mt-1">Klicke auf "Verknüpfen" um deinen Google Kalender einzubetten</p>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* ============ BODY DATA TAB ============ */}
+      {activeTab === 'bodydata' && (() => {
+        const bm = profile?.health_profile?.biomarkers || {}
+        return (
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
+            {/* LEFT: metrics + biomarkers */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-black text-dark">Body Data</h2>
+                <p className="text-sm text-muted mt-1">Physical measurements and health markers — used by the coach for personalized advice</p>
+              </div>
+
+              {/* Basic metrics */}
+              <div className="bg-white border border-border rounded-2xl p-6">
+                <BodyDataPanel profile={profile} onSave={handleSaveBodyData} />
+              </div>
+
+              {/* Nutrition & macros */}
+              <div className="bg-white border border-border rounded-2xl p-6">
+                <NutritionPanel profile={profile} onSave={handleSaveHealthProfile} />
+              </div>
+
+              {/* Blood Markers */}
+              <BiomarkerCard
+                title="Blood Markers" emoji="🩸"
+                description="Iron, vitamins and blood cell values from lab results"
+                fields={[
+                  { key: 'iron_ugdl', label: 'Iron', unit: 'µg/dL', placeholder: '100' },
+                  { key: 'ferritin_ugl', label: 'Ferritin', unit: 'µg/L', placeholder: '80' },
+                  { key: 'hemoglobin_gdl', label: 'Hemoglobin', unit: 'g/dL', placeholder: '14.5' },
+                  { key: 'vitamin_d_ngml', label: 'Vitamin D', unit: 'ng/mL', placeholder: '40' },
+                  { key: 'vitamin_b12_pmoll', label: 'Vitamin B12', unit: 'pmol/L', placeholder: '300' },
+                  { key: 'folate_nmoll', label: 'Folate', unit: 'nmol/L', placeholder: '15' },
+                ]}
+                values={bm}
+                onSave={handleSaveBiomarkers}
+              />
+
+              {/* Hormones */}
+              <BiomarkerCard
+                title="Hormones" emoji="⚗️"
+                description="Testosterone, cortisol, thyroid — from blood panel"
+                fields={[
+                  { key: 'testosterone_nmoll', label: 'Testosterone', unit: 'nmol/L', placeholder: '15' },
+                  { key: 'cortisol_nmoll', label: 'Cortisol', unit: 'nmol/L', placeholder: '400' },
+                  { key: 'tsh_miull', label: 'TSH', unit: 'mIU/L', placeholder: '1.5', step: 0.01 },
+                  { key: 'estradiol_pmoll', label: 'Estradiol', unit: 'pmol/L', placeholder: '80' },
+                  { key: 'dhea_umoll', label: 'DHEA-S', unit: 'µmol/L', placeholder: '6' },
+                  { key: 'insulin_miull', label: 'Insulin', unit: 'mIU/L', placeholder: '5', step: 0.1 },
+                ]}
+                values={bm}
+                onSave={handleSaveBiomarkers}
+              />
+
+              {/* Cardiovascular */}
+              <BiomarkerCard
+                title="Cardiovascular" emoji="❤️"
+                description="Heart rate, blood pressure, cholesterol"
+                fields={[
+                  { key: 'resting_hr_bpm', label: 'Resting HR', unit: 'bpm', placeholder: '60', step: 1 },
+                  { key: 'bp_systolic', label: 'BP Systolic', unit: 'mmHg', placeholder: '120', step: 1 },
+                  { key: 'bp_diastolic', label: 'BP Diastolic', unit: 'mmHg', placeholder: '80', step: 1 },
+                  { key: 'cholesterol_total', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: '180', step: 1 },
+                  { key: 'cholesterol_hdl', label: 'HDL', unit: 'mg/dL', placeholder: '55', step: 1 },
+                  { key: 'cholesterol_ldl', label: 'LDL', unit: 'mg/dL', placeholder: '110', step: 1 },
+                  { key: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', placeholder: '100', step: 1 },
+                ]}
+                values={bm}
+                onSave={handleSaveBiomarkers}
+              />
+
+              {/* Metabolic */}
+              <BiomarkerCard
+                title="Metabolic & Organ" emoji="🔬"
+                description="Glucose, kidney and liver markers"
+                fields={[
+                  { key: 'glucose_mgdl', label: 'Fasting Glucose', unit: 'mg/dL', placeholder: '90', step: 1 },
+                  { key: 'hba1c_pct', label: 'HbA1c', unit: '%', placeholder: '5.2', step: 0.1 },
+                  { key: 'creatinine_mgdl', label: 'Creatinine', unit: 'mg/dL', placeholder: '0.9', step: 0.01 },
+                  { key: 'uric_acid_mgdl', label: 'Uric Acid', unit: 'mg/dL', placeholder: '5.5', step: 0.1 },
+                  { key: 'alt_ul', label: 'ALT', unit: 'U/L', placeholder: '25', step: 1 },
+                  { key: 'ast_ul', label: 'AST', unit: 'U/L', placeholder: '22', step: 1 },
+                ]}
+                values={bm}
+                onSave={handleSaveBiomarkers}
+              />
+            </div>
+
+            {/* RIGHT: gauges + body composition */}
+            <div className="space-y-4 xl:sticky xl:top-6">
+              <div className="bg-white border border-border rounded-2xl p-5">
+                <h3 className="text-sm font-bold text-dark mb-3">BMI</h3>
+                <BmiGauge weightKg={profile?.weight_kg} heightCm={profile?.height_cm} bmiValue={profile?.bmi_value} />
+              </div>
+              {profile?.body_fat_pct && (
+                <div className="bg-white border border-border rounded-2xl p-5">
+                  <h3 className="text-sm font-bold text-dark mb-3">Body Fat %</h3>
+                  <KfaGauge kfa={profile.body_fat_pct} gender={profile?.gender} />
+                </div>
+              )}
+              <BodyCompositionCard values={bm} onSave={handleSaveBiomarkers} />
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ============ STATS TAB ============ */}
       {activeTab === 'stats' && (

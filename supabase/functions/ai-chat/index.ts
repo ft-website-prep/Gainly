@@ -306,6 +306,53 @@ Deno.serve(async (req) => {
       if (hp.injuries) lines.push(`⚠️ Injuries/conditions: ${hp.injuries}`);
       if (hp.allergies) lines.push(`🚫 Allergies/intolerances: ${hp.allergies}`);
       if (hp.notes) lines.push(`Coach notes: ${hp.notes}`);
+
+      // Biomarkers
+      const bm = hp.biomarkers;
+      if (bm && typeof bm === "object") {
+        const blood: string[] = [];
+        if (bm.iron_ugdl) blood.push(`Iron ${bm.iron_ugdl}µg/dL`);
+        if (bm.ferritin_ugl) blood.push(`Ferritin ${bm.ferritin_ugl}µg/L`);
+        if (bm.hemoglobin_gdl) blood.push(`Hemoglobin ${bm.hemoglobin_gdl}g/dL`);
+        if (bm.vitamin_d_ngml) blood.push(`Vitamin D ${bm.vitamin_d_ngml}ng/mL`);
+        if (bm.vitamin_b12_pmoll) blood.push(`B12 ${bm.vitamin_b12_pmoll}pmol/L`);
+        if (bm.folate_nmoll) blood.push(`Folate ${bm.folate_nmoll}nmol/L`);
+        if (blood.length) lines.push(`Blood markers: ${blood.join(", ")}`);
+
+        const hormones: string[] = [];
+        if (bm.testosterone_nmoll) hormones.push(`Testosterone ${bm.testosterone_nmoll}nmol/L`);
+        if (bm.cortisol_nmoll) hormones.push(`Cortisol ${bm.cortisol_nmoll}nmol/L`);
+        if (bm.tsh_miull) hormones.push(`TSH ${bm.tsh_miull}mIU/L`);
+        if (bm.estradiol_pmoll) hormones.push(`Estradiol ${bm.estradiol_pmoll}pmol/L`);
+        if (bm.dhea_umoll) hormones.push(`DHEA-S ${bm.dhea_umoll}µmol/L`);
+        if (bm.insulin_miull) hormones.push(`Insulin ${bm.insulin_miull}mIU/L`);
+        if (hormones.length) lines.push(`Hormones: ${hormones.join(", ")}`);
+
+        const cardio: string[] = [];
+        if (bm.resting_hr_bpm) cardio.push(`Resting HR ${bm.resting_hr_bpm}bpm`);
+        if (bm.bp_systolic && bm.bp_diastolic) cardio.push(`BP ${bm.bp_systolic}/${bm.bp_diastolic}mmHg`);
+        if (bm.cholesterol_total) cardio.push(`Total cholesterol ${bm.cholesterol_total}mg/dL`);
+        if (bm.cholesterol_hdl) cardio.push(`HDL ${bm.cholesterol_hdl}mg/dL`);
+        if (bm.cholesterol_ldl) cardio.push(`LDL ${bm.cholesterol_ldl}mg/dL`);
+        if (bm.triglycerides) cardio.push(`Triglycerides ${bm.triglycerides}mg/dL`);
+        if (cardio.length) lines.push(`Cardiovascular: ${cardio.join(", ")}`);
+
+        const metabolic: string[] = [];
+        if (bm.glucose_mgdl) metabolic.push(`Fasting glucose ${bm.glucose_mgdl}mg/dL`);
+        if (bm.hba1c_pct) metabolic.push(`HbA1c ${bm.hba1c_pct}%`);
+        if (bm.creatinine_mgdl) metabolic.push(`Creatinine ${bm.creatinine_mgdl}mg/dL`);
+        if (bm.uric_acid_mgdl) metabolic.push(`Uric acid ${bm.uric_acid_mgdl}mg/dL`);
+        if (bm.alt_ul) metabolic.push(`ALT ${bm.alt_ul}U/L`);
+        if (bm.ast_ul) metabolic.push(`AST ${bm.ast_ul}U/L`);
+        if (metabolic.length) lines.push(`Metabolic/organ: ${metabolic.join(", ")}`);
+
+        const comp: string[] = [];
+        if (bm.waist_cm) comp.push(`waist ${bm.waist_cm}cm`);
+        if (bm.hip_cm) comp.push(`hip ${bm.hip_cm}cm`);
+        if (bm.neck_cm) comp.push(`neck ${bm.neck_cm}cm`);
+        if (comp.length) lines.push(`Body composition: ${comp.join(", ")}`);
+      }
+
       return lines.length ? lines.join("\n") : null;
     })();
 
