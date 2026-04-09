@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
   try {
     // --- 1. REQUEST AUSLESEN ---
-    const { conversation_id, message } = await req.json();
+    const { conversation_id, message, category_hint } = await req.json();
 
     if (!message || typeof message !== "string") {
       return new Response(
@@ -438,7 +438,7 @@ ${yearFocusSummary}
 ## Skill progressions
 ${progressSummary || "No progression data yet."}
 ${healthProfileSummary ? `\n## Health & Nutrition Profile\n${healthProfileSummary}` : ""}
-## Rules you must follow
+${category_hint ? `## ACTIVE FOCUS MODE\n${category_hint}\n` : ""}## Rules you must follow
 - NEVER give medical diagnoses. If the user describes pain or injury, recommend seeing a doctor.
 - If the user has logged injuries/conditions in their health profile, factor them in automatically when suggesting exercises — avoid movements that could aggravate them, and suggest safe alternatives.
 - If the user has logged allergies, respect them in any nutrition guidance.
