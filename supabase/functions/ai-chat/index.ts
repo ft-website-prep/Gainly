@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       // Profil: Level, Equipment, Streak, XP + Körperdaten
       supabaseAdmin
         .from("profiles")
-        .select("username, fitness_level, equipment, xp_total, current_streak, longest_streak, ai_preferred_language, weight_kg, height_cm, bmi_value, body_fat_pct")
+        .select("username, fitness_level, equipment, xp_total, current_streak, longest_streak, ai_preferred_language, weight_kg, height_cm, bmi_value, body_fat_pct, health_profile")
         .eq("id", user.id)
         .single(),
 
@@ -282,6 +282,33 @@ Deno.serve(async (req) => {
       return parts.length ? parts.join(", ") : "Not set";
     })();
 
+    // Health & Nutrition Profil formatieren
+    const healthProfileSummary = (() => {
+      const hp = (profile as any)?.health_profile;
+      if (!hp || typeof hp !== "object") return null;
+      const lines: string[] = [];
+      if (hp.diet_type) lines.push(`Diet: ${hp.diet_type}`);
+      const macros: string[] = [];
+      if (hp.calories_target) macros.push(`${hp.calories_target} kcal`);
+      if (hp.protein_g) macros.push(`protein ${hp.protein_g}g`);
+      if (hp.carbs_g) macros.push(`carbs ${hp.carbs_g}g`);
+      if (hp.fat_g) macros.push(`fat ${hp.fat_g}g`);
+      if (hp.fiber_g) macros.push(`fiber ${hp.fiber_g}g`);
+      if (macros.length) lines.push(`Daily macro targets: ${macros.join(", ")}`);
+      if (hp.water_l) lines.push(`Water intake: ${hp.water_l}L/day`);
+      if (hp.sleep_hours) lines.push(`Sleep: ${hp.sleep_hours}h/night`);
+      const micros: string[] = [];
+      if (hp.vitamin_d_iu) micros.push(`Vitamin D ${hp.vitamin_d_iu}IU`);
+      if (hp.omega3_g) micros.push(`Omega-3 ${hp.omega3_g}g`);
+      if (hp.magnesium_mg) micros.push(`Magnesium ${hp.magnesium_mg}mg`);
+      if (micros.length) lines.push(`Micronutrients: ${micros.join(", ")}`);
+      if (hp.supplements) lines.push(`Supplements: ${hp.supplements}`);
+      if (hp.injuries) lines.push(`⚠️ Injuries/conditions: ${hp.injuries}`);
+      if (hp.allergies) lines.push(`🚫 Allergies/intolerances: ${hp.allergies}`);
+      if (hp.notes) lines.push(`Coach notes: ${hp.notes}`);
+      return lines.length ? lines.join("\n") : null;
+    })();
+
     // Liga berechnen
     const xp = profile?.xp_total || 0;
     const league = xp >= 50000 ? "Legend"
@@ -363,10 +390,12 @@ ${yearFocusSummary}
 
 ## Skill progressions
 ${progressSummary || "No progression data yet."}
-
+${healthProfileSummary ? `\n## Health & Nutrition Profile\n${healthProfileSummary}` : ""}
 ## Rules you must follow
 - NEVER give medical diagnoses. If the user describes pain or injury, recommend seeing a doctor.
-- NEVER recommend supplements or medication.
+- If the user has logged injuries/conditions in their health profile, factor them in automatically when suggesting exercises — avoid movements that could aggravate them, and suggest safe alternatives.
+- If the user has logged allergies, respect them in any nutrition guidance.
+- NEVER recommend supplements or medication — you may only reference what the user has already logged in their profile.
 - If asked about nutrition, give general guidance only. You are not a dietitian.
 - Base your recommendations on the user's actual fitness level and equipment.
 - If the user asks about an exercise they don't have equipment for, suggest a bodyweight alternative.
