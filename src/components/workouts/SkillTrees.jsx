@@ -496,6 +496,9 @@ function SkillTreePanel({ skill, graph, completedSet, onToggle, onClose }) {
   const scrollRef = useRef(null)
   const [canUp,   setCanUp]   = useState(false)
   const [canDown, setCanDown] = useState(false)
+  const [zoom,    setZoom]    = useState(1)
+
+  const clampZoom = z => Math.min(2, Math.max(0.4, Math.round(z * 10) / 10))
 
   const completedHere = graph.nodes.filter(n => completedSet.has(n.id)).length
   const totalHere     = graph.nodes.length
@@ -514,6 +517,19 @@ function SkillTreePanel({ skill, graph, completedSet, onToggle, onClose }) {
     // Center horizontally if content is wider than the panel
     el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2)
     requestAnimationFrame(checkScroll)
+  }, [])
+
+  // Ctrl+wheel / pinch-to-zoom (non-passive so we can preventDefault)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      setZoom(z => clampZoom(z - e.deltaY * 0.002))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
   const circumference = 2 * Math.PI * 15   // r=15 circle
@@ -574,6 +590,28 @@ function SkillTreePanel({ skill, graph, completedSet, onToggle, onClose }) {
             <div className="text-white font-bold text-sm leading-tight">{completedHere}/{totalHere}</div>
             <div className="text-gray-500 text-[10px] leading-tight">completed</div>
           </div>
+
+          {/* ── Zoom controls ── */}
+          <div className="flex items-center gap-1 ml-2 bg-gray-800/80 rounded-lg px-1.5 py-1 border border-gray-700/60">
+            <button
+              onClick={() => setZoom(z => clampZoom(z - 0.1))}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors text-base font-bold leading-none"
+              title="Zoom out">
+              −
+            </button>
+            <button
+              onClick={() => setZoom(1)}
+              className="text-[10px] font-bold text-gray-400 hover:text-white transition-colors w-8 text-center tabular-nums"
+              title="Reset zoom">
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              onClick={() => setZoom(z => clampZoom(z + 0.1))}
+              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors text-base font-bold leading-none"
+              title="Zoom in">
+              +
+            </button>
+          </div>
         </div>
       </div>
 
@@ -582,7 +620,7 @@ function SkillTreePanel({ skill, graph, completedSet, onToggle, onClose }) {
 
         <div ref={scrollRef} onScroll={checkScroll}
           className="absolute inset-0 overflow-auto">
-          <div className="flex justify-center items-start py-10 px-6" style={{ minHeight: '100%' }}>
+          <div className="flex justify-center items-start py-10 px-6" style={{ minHeight: '100%', zoom }}>
             <PyramidTree graph={graph} completedSet={completedSet} onToggle={onToggle} />
           </div>
         </div>
