@@ -1,52 +1,70 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function CustomCursor() {
-  const dotRef = useRef(null)
+  const shadowRef = useRef(null)
+  const frameRef = useRef(0)
+  const [enabled, setEnabled] = useState(false)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    let mouse = { x: -100, y: -100 }
-    let dot = { x: -100, y: -100 }
-    let rafId
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
 
-    const onMove = (e) => {
-      mouse.x = e.clientX
-      mouse.y = e.clientY
+    const syncEnabled = () => {
+      setEnabled(mediaQuery.matches)
     }
 
-    const animate = () => {
-      dot.x += (mouse.x - dot.x) * 0.1
-      dot.y += (mouse.y - dot.y) * 0.1
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${dot.x - 2.5}px, ${dot.y - 2.5}px)`
-      }
-      rafId = requestAnimationFrame(animate)
-    }
-
-    window.addEventListener('mousemove', onMove)
-    rafId = requestAnimationFrame(animate)
+    syncEnabled()
+    mediaQuery.addEventListener('change', syncEnabled)
 
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      cancelAnimationFrame(rafId)
+      mediaQuery.removeEventListener('change', syncEnabled)
     }
   }, [])
 
+  useEffect(() => {
+    if (!enabled) return undefined
+
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    let shadow = { x: mouse.x, y: mouse.y }
+
+    const animate = () => {
+      shadow.x += (mouse.x - shadow.x) * 0.22
+      shadow.y += (mouse.y - shadow.y) * 0.22
+
+      if (shadowRef.current) {
+        shadowRef.current.style.transform = `translate3d(${shadow.x + 10}px, ${shadow.y + 12}px, 0) translate(-50%, -50%)`
+      }
+
+      frameRef.current = window.requestAnimationFrame(animate)
+    }
+
+    const onMove = (event) => {
+      mouse.x = event.clientX
+      mouse.y = event.clientY
+      setVisible(true)
+    }
+
+    const onLeave = () => setVisible(false)
+    const onEnter = () => setVisible(true)
+
+    window.addEventListener('mousemove', onMove, { passive: true })
+    document.addEventListener('mouseleave', onLeave)
+    document.addEventListener('mouseenter', onEnter)
+    frameRef.current = window.requestAnimationFrame(animate)
+
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseleave', onLeave)
+      document.removeEventListener('mouseenter', onEnter)
+      window.cancelAnimationFrame(frameRef.current)
+    }
+  }, [enabled])
+
+  if (!enabled) return null
+
   return (
-    <div
-      ref={dotRef}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: 5,
-        height: 5,
-        background: '#e10600',
-        opacity: 0.45,
-        borderRadius: '50%',
-        pointerEvents: 'none',
-        zIndex: 99999,
-        willChange: 'transform',
-      }}
-    />
+    <div className={`custom-cursor-layer ${visible ? 'is-visible' : ''}`} aria-hidden="true">
+      <div ref={shadowRef} className="custom-cursor-shadow" />
+    </div>
   )
 }

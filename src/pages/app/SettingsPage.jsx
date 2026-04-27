@@ -8,7 +8,7 @@ function Toggle({ checked, onChange }) {
       className={`w-12 h-7 rounded-full transition-all duration-200 relative flex-shrink-0 ${
         checked ? 'bg-red-500 shadow-red-200 shadow-md' : 'bg-gray-200'
       }`}>
-      <div className="bg-white rounded-full shadow-md absolute top-[3px] transition-all duration-200"
+      <div className="bg-surface rounded-full shadow-md absolute top-[3px] transition-all duration-200"
         style={{ width: '22px', height: '22px', left: checked ? '23px' : '3px' }} />
     </button>
   )
@@ -38,7 +38,7 @@ function Section({ title, icon, color, children }) {
     amber: 'from-amber-500 to-orange-500',
   }
   return (
-    <div className="bg-white border border-border rounded-2xl overflow-hidden">
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
       <div className={`bg-gradient-to-r ${colors[color] || colors.blue} px-6 py-4`}>
         <div className="flex items-center gap-2.5">
           <span className="text-xl">{icon}</span>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
               <div className="mt-4 ml-[52px] p-5 bg-red-50 border border-red-200 rounded-2xl">
                 <p className="text-sm text-red-600 mb-3">This is <strong>permanent</strong>. Type <strong>DELETE</strong> to confirm.</p>
                 <input type="text" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder='Type "DELETE"'
-                  className="w-full bg-white border border-red-200 rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 mb-3" />
+                  className="w-full bg-surface border border-red-200 rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 mb-3" />
                 <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'DELETE'}
                   className="w-full py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 text-sm font-bold disabled:opacity-30 shadow-lg shadow-red-200">
                   Permanently Delete Account

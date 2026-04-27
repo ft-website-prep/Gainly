@@ -14,15 +14,13 @@ export default function WorkoutsPage() {
   const [activeTab, setActiveTab] = useState('train')
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [exploreSection, setExploreSection] = useState(null)
-  const [exploreMethodId, setExploreMethodId] = useState(null)
 
   if (activeWorkout) {
     return <ActiveWorkout workout={activeWorkout} onFinish={() => setActiveWorkout(null)} />
   }
 
-  const goToExplore = (section = null, methodId = null) => {
+  const goToExplore = (section = null) => {
     setExploreSection(section)
-    setExploreMethodId(methodId)
     setActiveTab('explore')
   }
 
@@ -34,7 +32,7 @@ export default function WorkoutsPage() {
             className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all ${
               activeTab === tab.id
                 ? 'bg-dark text-white shadow-lg'
-                : 'bg-white border border-border text-muted hover:border-red-200 hover:text-dark'
+                : 'bg-surface border border-border text-muted hover:border-red-200 hover:text-dark'
             }`}>
             <span className="text-base">{tab.icon}</span>
             <span>{tab.label}</span>
@@ -44,13 +42,7 @@ export default function WorkoutsPage() {
 
       {activeTab === 'train'   && <TrainTab onStartWorkout={setActiveWorkout} onGoToExplore={goToExplore} />}
       {activeTab === 'build'   && <BuildTab />}
-      {activeTab === 'explore' && (
-        <ExploreTab
-          key={`${exploreSection}-${exploreMethodId}`}
-          initialSection={exploreSection}
-          initialMethodId={exploreMethodId}
-        />
-      )}
+      {activeTab === 'explore' && <ExploreTab initialSection={exploreSection} />}
     </div>
   )
 }

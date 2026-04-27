@@ -113,7 +113,7 @@ function DateRangePicker({ range, onChange }) {
     <div className="flex gap-1 bg-surface border border-border rounded-xl p-1">
       {[{ l: '7D', d: 7 }, { l: '14D', d: 14 }, { l: '30D', d: 30 }, { l: '90D', d: 90 }, { l: '6M', d: 180 }, { l: '1Y', d: 365 }].map(p => (
         <button key={p.d} onClick={() => onChange(p.d)}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === p.d ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>{p.l}</button>
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === p.d ? 'bg-surface text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>{p.l}</button>
       ))}
     </div>
   )
@@ -173,7 +173,7 @@ function BodyMetricsModal({ profile, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+      <div className="bg-surface rounded-2xl w-full max-w-sm shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-lg font-bold text-dark">BMI & Body Fat</h2>
           <button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button>
@@ -234,7 +234,7 @@ function BodyDataModal({ profile, onClose, onSave }) {
   const handleSave = async () => { setSaving(true); await onSave({ weight_kg: weight || null, height_cm: height || null, birth_date: birthDate || null, gender: gender || null }); setSaving(false); onClose() }
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+      <div className="bg-surface rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-border"><h2 className="text-lg font-bold text-dark">Body Data</h2><button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button></div>
         <div className="p-6 space-y-4">
           <div><label className="block text-sm text-muted mb-1.5">Weight (kg)</label><input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} placeholder="75.5" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div>
@@ -289,7 +289,7 @@ function ProgressAddModal({ onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+      <div className="bg-surface rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-lg font-bold text-dark">Add Progress Photo</h2>
           <button onClick={onClose} className="text-muted hover:text-dark text-xl">✕</button>
@@ -423,6 +423,34 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [bio, setBio] = useState('')
   const [bioPublic, setBioPublic] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef(null)
+
+  const uploadAvatar = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); return }
+
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop()
+    const path = `${user.id}/avatar.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+
+    if (uploadError) {
+      console.error('Upload failed:', uploadError)
+      setUploadingAvatar(false)
+      return
+    }
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+    const publicUrl = urlData.publicUrl + '?t=' + Date.now()
+    setAvatarUrl(publicUrl)
+    setUploadingAvatar(false)
+  }
 
   // Stats
   const [statsRange, setStatsRange] = useState(30)
@@ -520,7 +548,7 @@ export default function ProfilePage() {
       <div className="flex gap-1 bg-surface border border-border rounded-xl p-1 mb-6">
         {['profile', 'stats'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab ? 'bg-surface text-dark shadow-sm' : 'text-muted hover:text-dark'}`}>
             {tab === 'profile' ? 'Profile' : 'Stats & Progress'}
           </button>
         ))}
@@ -532,7 +560,7 @@ export default function ProfilePage() {
       {activeTab === 'profile' && (
         <div className="space-y-6">
           {/* Personal Info + Body Data */}
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-dark">Personal Info</h2>
               {!editMode && profile?.username && <button onClick={() => setEditMode(true)} className="text-red-500 hover:text-red-600 text-sm font-medium">Edit</button>}
@@ -540,7 +568,31 @@ export default function ProfilePage() {
 
             {editMode ? (
               <div className="space-y-4">
-                <div><label className="block text-sm text-muted mb-2">Avatar URL</label><div className="flex gap-3 items-center"><div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">{avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}</div><input type="url" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /></div></div>
+                <div>
+                  <label className="block text-sm text-muted mb-2">Profile Picture</label>
+                  <div className="flex gap-3 items-center">
+                    <div
+                      onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                      className="relative w-14 h-14 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0 cursor-pointer group hover:border-red-300 transition-colors"
+                    >
+                      {avatarUrl ? <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" /> : '👤'}
+                      <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-white text-xs">📷</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                        className="px-4 py-2 bg-surface border border-border rounded-xl text-sm text-muted hover:text-red-500 hover:border-red-200 transition-colors font-medium"
+                      >
+                        {uploadingAvatar ? 'Uploading...' : 'Upload Image'}
+                      </button>
+                      <p className="text-[11px] text-dim mt-1">PNG, JPG — max 5MB</p>
+                    </div>
+                    <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={uploadAvatar} />
+                  </div>
+                </div>
                 <div><label className="block text-sm text-muted mb-2">Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="fitnessbeast42" className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" /><p className="text-xs text-dim mt-1">3-20 chars, letters, numbers and _</p></div>
                 <div><label className="block text-sm text-muted mb-2">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Your fitness journey..." className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400 resize-none" /><label className="flex items-center gap-2 mt-2 cursor-pointer"><input type="checkbox" checked={bioPublic} onChange={e => setBioPublic(e.target.checked)} className="w-4 h-4 rounded" /><span className="text-xs text-muted">Show publicly in Community</span></label></div>
                 <div className="flex gap-3">
@@ -584,7 +636,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Progress Timeline (Photos/Videos only) */}
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Progress Timeline</h2>
               <button onClick={() => setShowProgressModal(true)}
@@ -594,7 +646,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Google Calendar */}
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-base font-bold text-dark">📅 Google Calendar</h2>
@@ -610,11 +662,11 @@ export default function ProfilePage() {
             {showCalendarEdit && (
               <div className="mb-5 space-y-3 bg-surface rounded-xl p-4 border border-border">
                 <p className="text-xs text-muted leading-relaxed">
-                  <strong className="text-dark">So geht's:</strong> Google Calendar öffnen → Einstellungen → deinen Kalender auswählen → "In andere Apps einbetten" → die <code className="bg-white px-1 py-0.5 rounded text-[10px] border border-border">src</code>-URL aus dem iframe-Code kopieren.
+                  <strong className="text-dark">So geht's:</strong> Google Calendar öffnen → Einstellungen → deinen Kalender auswählen → "In andere Apps einbetten" → die <code className="bg-surface px-1 py-0.5 rounded text-[10px] border border-border">src</code>-URL aus dem iframe-Code kopieren.
                 </p>
                 <input type="url" value={calendarInput} onChange={e => setCalendarInput(e.target.value)}
                   placeholder="https://calendar.google.com/calendar/embed?src=..."
-                  className="w-full bg-white border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
+                  className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-dark text-sm focus:outline-none focus:border-red-400" />
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setCalendarUrl(calendarInput); localStorage.setItem('gainly_gcal_url', calendarInput); setShowCalendarEdit(false) }}
@@ -664,23 +716,23 @@ export default function ProfilePage() {
             <DateRangePicker range={statsRange} onChange={setStatsRange} />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white border border-red-200 rounded-xl p-4 text-center"><div className="text-2xl font-black text-red-500">{profile?.xp_total || 0}</div><div className="text-xs text-red-400 mt-1">Total XP</div></div>
-            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{workoutCount}</div><div className="text-xs text-muted mt-1">Workouts</div></div>
-            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{profile?.current_streak || 0} 🔥</div><div className="text-xs text-muted mt-1">Streak</div></div>
-            <div className="bg-white border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{achievementCount}</div><div className="text-xs text-muted mt-1">Achievements</div></div>
+            <div className="bg-surface border border-red-200 rounded-xl p-4 text-center"><div className="text-2xl font-black text-red-500">{profile?.xp_total || 0}</div><div className="text-xs text-red-400 mt-1">Total XP</div></div>
+            <div className="bg-surface border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{workoutCount}</div><div className="text-xs text-muted mt-1">Workouts</div></div>
+            <div className="bg-surface border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{profile?.current_streak || 0} 🔥</div><div className="text-xs text-muted mt-1">Streak</div></div>
+            <div className="bg-surface border border-border rounded-xl p-4 text-center"><div className="text-2xl font-black text-dark">{achievementCount}</div><div className="text-xs text-muted mt-1">Achievements</div></div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={xpData} label="XP Earned" color="#e10600" /></div>
-            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={workoutData} label="Workouts" color="#34d399" /></div>
+            <div className="bg-surface border border-border rounded-2xl p-6"><AreaChart data={xpData} label="XP Earned" color="#e10600" /></div>
+            <div className="bg-surface border border-border rounded-2xl p-6"><AreaChart data={workoutData} label="Workouts" color="#34d399" /></div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-2xl p-6"><BarChart data={workoutData} label="Workout Frequency" /></div>
-            <div className="bg-white border border-border rounded-2xl p-6"><RadarChart data={muscleData} /></div>
+            <div className="bg-surface border border-border rounded-2xl p-6"><BarChart data={workoutData} label="Workout Frequency" /></div>
+            <div className="bg-surface border border-border rounded-2xl p-6"><RadarChart data={muscleData} /></div>
           </div>
           {weightHistory.length > 0 && (
-            <div className="bg-white border border-border rounded-2xl p-6"><AreaChart data={weightHistory} label="Weight Trend" color="#8b5cf6" unit=" kg" /></div>
+            <div className="bg-surface border border-border rounded-2xl p-6"><AreaChart data={weightHistory} label="Weight Trend" color="#8b5cf6" unit=" kg" /></div>
           )}
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="text-sm font-semibold text-dark mb-4">Goals</div>
             <div className="space-y-4">
               <ProgressBar label="Weekly Workouts" value={workoutData[workoutData.length - 1]?.value || 0} max={7} />

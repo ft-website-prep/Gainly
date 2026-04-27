@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import CustomCursor from './components/app/CustomCursor'
 
 // Öffentliche Seiten
 import LandingPage from './pages/LandingPage'
@@ -25,9 +25,9 @@ import LeaderboardsPage from './pages/app/LeaderboardsPage'
 
 function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthProvider>
-        <CustomCursor />
         <Routes>
           {/* === Öffentliche Routen === */}
           <Route path="/" element={<LandingPage />} />
@@ -69,6 +69,7 @@ function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

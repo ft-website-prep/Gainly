@@ -4,19 +4,20 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // === Gainly Red Color Scheme ===
-        dark: "#0a0a0a",
-        light: "#f6f6f6",
-        surface: "#ffffff",
-        border: "#eeeeee",
-        muted: "#555555",
-        dim: "#999999",
+        // === Gainly — uses CSS vars so dark mode swaps them ===
+        dark: "var(--color-dark)",
+        light: "var(--color-light)",
+        surface: "var(--color-surface)",
+        border: "var(--color-border)",
+        muted: "var(--color-muted)",
+        dim: "var(--color-dim)",
         accent: "#e10600",
         "accent-hover": "#ff3b3b",
-        "accent-soft": "#fff1f0",
+        "accent-soft": "var(--color-accent-soft)",
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
