@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+import MetricDetailPanel from '../../components/profile/MetricDetailPanel'
 
 // =============================================
 // CONSTANTS & HELPERS
@@ -355,13 +356,13 @@ const BODY_DATA_CATEGORIES = [
     description: 'Heart rate, blood pressure, cholesterol',
     source: 'bm',
     fields: [
-      { key: 'resting_hr_bpm', label: 'Resting Heart Rate', unit: 'bpm', placeholder: '60', step: 1, info: 'Lower is better. Trained athletes: 40–60 bpm. High resting HR = poor fitness or overtraining.' },
-      { key: 'bp_systolic', label: 'Blood Pressure (sys)', unit: 'mmHg', placeholder: '120', step: 1, info: 'Systolic pressure (peak during heartbeat). Normal: <120 mmHg.' },
-      { key: 'bp_diastolic', label: 'Blood Pressure (dia)', unit: 'mmHg', placeholder: '80', step: 1, info: 'Diastolic pressure (between beats). Normal: <80 mmHg.' },
-      { key: 'cholesterol_total', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: '180', step: 1, info: 'HDL + LDL combined. Optimal <200 mg/dL. Context matters — high HDL is beneficial.' },
-      { key: 'cholesterol_hdl', label: 'HDL', unit: 'mg/dL', placeholder: '55', step: 1, info: '"Good" cholesterol. Removes cholesterol from arteries. Higher is better. <40 = risk factor.' },
-      { key: 'cholesterol_ldl', label: 'LDL', unit: 'mg/dL', placeholder: '110', step: 1, info: '"Bad" cholesterol. Builds up in arteries. Optimal for athletes: <100 mg/dL.' },
-      { key: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', placeholder: '100', step: 1, info: 'Blood fats. High levels linked to poor diet, excess carbs and insulin resistance. <150 = normal.' },
+      { key: 'resting_hr_bpm', label: 'Resting Heart Rate', unit: 'bpm', placeholder: '60', step: 1, info: 'Lower is better. Trained athletes: 40–60 bpm. High resting HR = poor fitness or overtraining.', description: 'Your resting heart rate is the number of times your heart beats per minute while fully at rest. It directly reflects how efficiently your heart works — the fitter you are, the fewer beats it needs to pump the same volume of blood. Normal range: 60–100 bpm. Endurance athletes often reach 40–60 bpm. Current research shows that a persistently elevated resting heart rate is an independent risk factor for heart disease, cancer, and all-cause mortality — regardless of blood pressure or cholesterol levels.', hasStudy: true },
+      { key: 'bp_systolic', label: 'Blood Pressure (sys)', unit: 'mmHg', placeholder: '120', step: 1, info: 'Systolic pressure (peak during heartbeat). Normal: <120 mmHg.', description: 'Systolic blood pressure is the peak pressure in your arteries when your heart beats and pushes blood out. It is the top number in a blood pressure reading (e.g. 120/80). Normal: below 120 mmHg. Elevated systolic pressure (≥130) is a key risk factor for stroke, heart attack, and kidney disease. The good news: regular exercise acutely and chronically lowers systolic blood pressure, with effects observed in people of all fitness levels and health backgrounds.', hasStudy: true },
+      { key: 'bp_diastolic', label: 'Blood Pressure (dia)', unit: 'mmHg', placeholder: '80', step: 1, info: 'Diastolic pressure (between beats). Normal: <80 mmHg.', description: 'Diastolic blood pressure is the pressure in your arteries between heartbeats, when your heart relaxes and refills. It is the bottom number in a blood pressure reading (e.g. 120/80). Normal: below 80 mmHg. Chronically elevated diastolic pressure indicates that your arteries are under constant stress, which accelerates arterial stiffening over time. Like systolic pressure, it responds well to regular aerobic and resistance exercise.', hasStudy: true },
+      { key: 'cholesterol_total', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: '180', step: 1, info: 'HDL + LDL combined. Optimal <200 mg/dL. Context matters — high HDL is beneficial.', description: 'Total cholesterol is the combined measure of all cholesterol in your blood, including HDL ("good"), LDL ("bad"), and VLDL. Optimal: below 200 mg/dL. However, the number alone is not the full story — a high total cholesterol driven by high HDL is very different from one driven by high LDL. The 2018 AHA/ACC guidelines emphasize that total cholesterol should always be interpreted alongside the individual components and your overall cardiovascular risk profile.', hasStudy: true },
+      { key: 'cholesterol_hdl', label: 'HDL', unit: 'mg/dL', placeholder: '55', step: 1, info: '"Good" cholesterol. Removes cholesterol from arteries. Higher is better. <40 = risk factor.', description: 'HDL (high-density lipoprotein) is known as "good" cholesterol because it transports excess cholesterol from your arteries back to the liver for removal. Higher HDL is consistently associated with lower cardiovascular risk — even among people with already low LDL levels. Optimal: above 60 mg/dL for men, above 50 mg/dL for women. Values below 40 mg/dL in men or 50 mg/dL in women are considered an independent risk factor for heart disease. Regular exercise is one of the most effective ways to raise HDL.', hasStudy: true },
+      { key: 'cholesterol_ldl', label: 'LDL', unit: 'mg/dL', placeholder: '110', step: 1, info: '"Bad" cholesterol. Builds up in arteries. Optimal for athletes: <100 mg/dL.', description: 'LDL (low-density lipoprotein) is the primary carrier of cholesterol in the blood and is the main driver of atherosclerosis — the buildup of plaques in artery walls that leads to heart attack and stroke. Unlike HDL, lower is better. Optimal: below 100 mg/dL, and below 70 mg/dL for high-risk individuals. A large body of genetic, epidemiological, and clinical trial evidence unequivocally establishes that LDL causes cardiovascular disease in a dose-dependent manner — the longer and higher your exposure, the greater your risk.', hasStudy: true },
+      { key: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', placeholder: '100', step: 1, info: 'Blood fats. High levels linked to poor diet, excess carbs and insulin resistance. <150 = normal.', description: 'Triglycerides are the most common type of fat in your blood. After eating, your body converts unused calories into triglycerides and stores them in fat cells. Normal: below 150 mg/dL. Borderline high: 150–199. High: 200–499. Very high: ≥500 mg/dL (risk of pancreatitis). Elevated triglycerides are closely linked to excess refined carbohydrates, sugar, alcohol, obesity, and insulin resistance. They have been rising in the US population since 1976, mirroring the growth of obesity and type 2 diabetes.', hasStudy: true },
     ],
   },
   {
@@ -400,6 +401,7 @@ function CategoryModal({ config, values, onSave, onClose }) {
   })
   const [saving, setSaving] = useState(false)
   const [infoKey, setInfoKey] = useState(null)
+  const [detailMetric, setDetailMetric] = useState(null)
 
   const handleSave = async () => {
     setSaving(true)
@@ -444,7 +446,10 @@ function CategoryModal({ config, values, onSave, onClose }) {
                 {f.unit && <span className="text-[10px] text-dim">({f.unit})</span>}
                 {f.info && (
                   <button
-                    onClick={() => setInfoKey(infoKey === f.key ? null : f.key)}
+                    onClick={() => f.hasStudy
+                      ? setDetailMetric(f)
+                      : setInfoKey(infoKey === f.key ? null : f.key)
+                    }
                     className={`w-4 h-4 rounded-full border text-[9px] flex items-center justify-center flex-shrink-0 transition-colors font-bold ${
                       infoKey === f.key ? 'bg-surface border-muted text-dark' : 'border-dim/50 text-dim hover:border-muted hover:text-muted'
                     }`}
@@ -488,6 +493,16 @@ function CategoryModal({ config, values, onSave, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Metric Detail Panel */}
+      {detailMetric && (
+        <MetricDetailPanel
+          metric={detailMetric}
+          categoryTitle={config.title}
+          categoryEmoji={config.emoji}
+          onClose={() => setDetailMetric(null)}
+        />
+      )}
     </div>
   )
 }
