@@ -6,50 +6,155 @@ import { getDailyQuote } from '../../lib/content'
 import DailyGoalWidget from '../../components/workouts/DailyGoalWidget'
 
 // =============================================
-// MINI LINE CHART (SVG)
+// XP PROGRESS CHART (SVG)
 // =============================================
-function LineChart({ data, label, color = '#e10600' }) {
+function XpChart({ data, color = '#e10600' }) {
+  const [hovered, setHovered] = useState(null)
+
   if (!data || data.length === 0) return null
 
   const max = Math.max(...data.map((d) => d.value), 1)
-  const width = 100
-  const height = 40
-  const padding = 2
+  const total = data.reduce((sum, d) => sum + d.value, 0)
+  const thisWeek = data[data.length - 1]?.value || 0
+  const lastWeek = data.length >= 2 ? data[data.length - 2]?.value || 0 : 0
+  const trend = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : thisWeek > 0 ? 100 : 0
+
+  const W = 400
+  const H = 160
+  const PX = 40
+  const PY = 20
+  const chartW = W - PX * 2
+  const chartH = H - PY * 2
 
   const points = data.map((d, i) => ({
-    x: padding + (i / (data.length - 1)) * (width - padding * 2),
-    y: height - padding - (d.value / max) * (height - padding * 2),
+    x: PX + (i / (data.length - 1)) * chartW,
+    y: PY + chartH - (d.value / max) * chartH,
     ...d,
   }))
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-  const areaPath = `${linePath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+  // Smooth cubic bezier path
+  const smoothLine = (pts) => {
+    if (pts.length < 2) return `M ${pts[0].x} ${pts[0].y}`
+    let path = `M ${pts[0].x} ${pts[0].y}`
+    for (let i = 0; i < pts.length - 1; i++) {
+      const curr = pts[i]
+      const next = pts[i + 1]
+      const cpx = (curr.x + next.x) / 2
+      path += ` C ${cpx} ${curr.y}, ${cpx} ${next.y}, ${next.x} ${next.y}`
+    }
+    return path
+  }
+
+  const linePath = smoothLine(points)
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${PY + chartH} L ${points[0].x} ${PY + chartH} Z`
+
+  // Y-axis tick values (4 ticks)
+  const yTicks = [0, Math.round(max * 0.33), Math.round(max * 0.66), max]
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm font-semibold text-dark">{label}</div>
-        <div className="text-xs text-dim">{data[data.length - 1]?.value || 0} this week</div>
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill={`url(#grad-${label})`} />
-        <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="2" fill="white" stroke={color} strokeWidth="1.5" />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1">
-        {data.map((d, i) => (
-          <div key={i} className="text-[10px] text-dim text-center" style={{ width: `${100 / data.length}%` }}>
-            {d.label}
+      {/* Header */}
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <div className="text-xs font-semibold text-dim uppercase tracking-wide mb-1">XP Progress</div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-dark">{total.toLocaleString()}</span>
+            <span className="text-xs text-dim">XP earned (8 weeks)</span>
           </div>
-        ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-lg font-black text-dark">{thisWeek.toLocaleString()}</div>
+            <div className="text-[10px] text-dim">this week</div>
+          </div>
+          {trend !== 0 && (
+            <div className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+              trend > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'
+            }`}>
+              {trend > 0 ? '+' : ''}{trend}%
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="relative" onMouseLeave={() => setHovered(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 180 }}>
+          <defs>
+            <linearGradient id="xp-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+            </linearGradient>
+          </defs>
+
+          {/* Horizontal gridlines */}
+          {yTicks.map((tick, i) => {
+            const y = PY + chartH - (tick / max) * chartH
+            return (
+              <g key={i}>
+                <line x1={PX} y1={y} x2={W - PX} y2={y} stroke="#e5e5e5" strokeWidth="0.8" strokeDasharray={i === 0 ? 'none' : '4 3'} />
+                <text x={PX - 8} y={y + 3.5} textAnchor="end" className="fill-gray-400" style={{ fontSize: 10 }}>
+                  {tick >= 1000 ? `${(tick / 1000).toFixed(1)}k` : tick}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Area fill */}
+          <path d={areaPath} fill="url(#xp-area-grad)" />
+
+          {/* Line */}
+          <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* Hover column targets + dots */}
+          {points.map((p, i) => {
+            const isActive = hovered === i
+            return (
+              <g key={i}
+                onMouseEnter={() => setHovered(i)}
+                style={{ cursor: 'pointer' }}
+              >
+                {/* Invisible hit area */}
+                <rect x={p.x - chartW / data.length / 2} y={PY} width={chartW / data.length} height={chartH} fill="transparent" />
+
+                {/* Vertical guide on hover */}
+                {isActive && (
+                  <line x1={p.x} y1={PY} x2={p.x} y2={PY + chartH} stroke={color} strokeWidth="1" strokeDasharray="4 3" opacity="0.3" />
+                )}
+
+                {/* Dot */}
+                <circle cx={p.x} cy={p.y} r={isActive ? 5 : 3} fill="white" stroke={color} strokeWidth={isActive ? 2.5 : 2}
+                  style={{ transition: 'r 0.15s ease' }}
+                />
+
+                {/* Tooltip */}
+                {isActive && (
+                  <g>
+                    <rect x={p.x - 28} y={p.y - 28} width={56} height={20} rx={6} fill="#1a1a1a" />
+                    <text x={p.x} y={p.y - 15} textAnchor="middle" fill="white" style={{ fontSize: 10, fontWeight: 700 }}>
+                      {p.value.toLocaleString()} XP
+                    </text>
+                  </g>
+                )}
+              </g>
+            )
+          })}
+        </svg>
+
+        {/* Week labels */}
+        <div className="flex justify-between px-[10%]">
+          {data.map((d, i) => (
+            <div
+              key={i}
+              className={`text-[11px] text-center font-medium transition-colors ${
+                hovered === i ? 'text-dark' : 'text-dim'
+              }`}
+              style={{ width: `${100 / data.length}%` }}
+            >
+              {d.label}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -164,7 +269,7 @@ export default function Dashboard() {
     <div className="max-w-4xl">
 
       {/* Profile Header + Quote */}
-      <div className="bg-white border border-border rounded-2xl p-6 mb-6">
+      <div className="bg-surface border border-border rounded-2xl p-6 mb-6">
         <div className="flex items-center gap-5">
           <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center text-3xl overflow-hidden border-2 border-border flex-shrink-0">
             {profile?.avatar_url ? (
@@ -197,17 +302,17 @@ export default function Dashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-border rounded-xl p-4 text-center">
+        <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <div className="text-2xl font-black text-red-500">{profile?.xp_total || 0}</div>
           <div className="text-xs text-muted mt-1">Total XP</div>
         </div>
-        <div className="bg-white border border-border rounded-xl p-4 text-center">
+        <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <div className="text-2xl font-black text-dark">
             {profile?.current_streak || 0} <span>{EMOJI_MAP.fire}</span>
           </div>
           <div className="text-xs text-muted mt-1">Week Streak</div>
         </div>
-        <div className="bg-white border border-border rounded-xl p-4 text-center">
+        <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <div className="text-2xl font-black text-dark">{weekWorkouts}</div>
           <div className="text-xs text-muted mt-1">This Week</div>
         </div>
@@ -220,13 +325,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT: Chart + Workouts */}
         <div className="lg:col-span-2 space-y-6">
-          {/* XP Line Chart */}
-          <div className="bg-white border border-border rounded-2xl p-6">
-            <LineChart data={xpWeekly} label="XP Progress" color="#e10600" />
+          {/* XP Progress Chart */}
+          <div className="bg-surface border border-border rounded-2xl p-6">
+            <XpChart data={xpWeekly} color="#e10600" />
           </div>
 
           {/* Saved Workouts */}
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Your Workouts</h2>
               <button onClick={() => navigate('/app/workouts')} className="text-red-500 hover:text-red-600 text-sm font-medium">
@@ -240,7 +345,7 @@ export default function Dashboard() {
                     className="flex items-center justify-between p-3.5 bg-surface rounded-xl hover:bg-red-50 transition-colors cursor-pointer group"
                     onClick={() => navigate('/app/workouts')}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-white border border-border rounded-lg flex items-center justify-center text-lg group-hover:border-red-200">
+                      <div className="w-9 h-9 bg-surface border border-border rounded-lg flex items-center justify-center text-lg group-hover:border-red-200">
                         {EMOJI_MAP.muscle}
                       </div>
                       <div>
@@ -269,7 +374,7 @@ export default function Dashboard() {
 
         {/* RIGHT: Community Feed Teaser */}
         <div className="space-y-6">
-          <div className="bg-white border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-dark">Community</h2>
               <button onClick={() => navigate('/app/community')} className="text-red-500 hover:text-red-600 text-sm font-medium">
@@ -282,7 +387,7 @@ export default function Dashboard() {
                 {recentPosts.map((post) => (
                   <div key={post.id} className="p-3.5 bg-surface rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 bg-white border border-border rounded-full flex items-center justify-center text-xs overflow-hidden">
+                      <div className="w-6 h-6 bg-surface border border-border rounded-full flex items-center justify-center text-xs overflow-hidden">
                         {post.profiles?.avatar_url ? (
                           <img src={post.profiles.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
                         ) : (

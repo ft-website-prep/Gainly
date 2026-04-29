@@ -6,7 +6,7 @@ export default function ProgressPage() {
         <p className="text-muted mt-1">Track your gains over time</p>
       </div>
 
-      <div className="bg-white border border-border rounded-xl p-12 text-center">
+      <div className="bg-surface border border-border rounded-xl p-12 text-center">
         <div className="text-5xl mb-4">🚧</div>
         <h2 className="text-xl font-bold text-dark mb-2">Coming Soon</h2>
         <p className="text-muted">

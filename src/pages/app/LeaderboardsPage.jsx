@@ -104,7 +104,7 @@ export default function LeaderboardsPage() {
       {myProfile && (
         <div className={`bg-gradient-to-br ${myTier.color} rounded-2xl p-5 text-white relative overflow-hidden`}>
           {/* Decorative glow */}
-          <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -top-6 -right-6 w-32 h-32 bg-surface/10 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] text-white/60 mb-0.5 uppercase tracking-wider">Your Global Rank</div>
@@ -120,8 +120,8 @@ export default function LeaderboardsPage() {
             <span>{myXP.toLocaleString()} XP</span>
             {nextTier ? <span>{nextTier.min.toLocaleString()} XP → {nextTier.icon} {nextTier.name}</span> : <span>Max tier reached ⭐</span>}
           </div>
-          <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all shadow-sm" style={{ width: `${progressToNext}%` }} />
+          <div className="h-2.5 bg-surface/20 rounded-full overflow-hidden">
+            <div className="h-full bg-surface rounded-full transition-all shadow-sm" style={{ width: `${progressToNext}%` }} />
           </div>
           {nextTier && (
             <div className="mt-2 text-[9px] text-white/50">
@@ -132,7 +132,7 @@ export default function LeaderboardsPage() {
       )}
 
       {/* Tier Legend */}
-      <div className="bg-white border border-border rounded-2xl p-4">
+      <div className="bg-surface border border-border rounded-2xl p-4">
         <div className="text-xs font-bold text-dark mb-3">All Tiers — How far can you climb?</div>
         <div className="space-y-2">
           {TIERS.map((t, i) => {
@@ -169,7 +169,7 @@ export default function LeaderboardsPage() {
           { id: 'exercise',     label: 'Exercise',   icon: '📊' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === t.id ? 'bg-dark text-white' : 'bg-white border border-border text-muted hover:border-red-200'}`}>
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === t.id ? 'bg-dark text-white' : 'bg-surface border border-border text-muted hover:border-red-200'}`}>
             <div>{t.icon}</div>
             <div className="mt-0.5">{t.label}</div>
           </button>
@@ -197,7 +197,7 @@ export default function LeaderboardsPage() {
         <div className="flex gap-2 flex-wrap">
           {EXERCISE_BOARDS.map(e => (
             <button key={e.id} onClick={() => setExerciseTab(e.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${exerciseTab === e.id ? 'bg-dark text-white' : 'bg-white border border-border text-muted hover:border-red-200'}`}>
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${exerciseTab === e.id ? 'bg-dark text-white' : 'bg-surface border border-border text-muted hover:border-red-200'}`}>
               <span>{e.icon}</span> {e.label}
             </button>
           ))}
@@ -205,7 +205,7 @@ export default function LeaderboardsPage() {
       )}
 
       {/* Leaderboard List */}
-      <div className="bg-white border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <div className="text-sm font-bold text-dark">
             {tab === 'exercise' ? EXERCISE_BOARDS.find(e => e.id === exerciseTab)?.label + ' Rankings' : tab.charAt(0).toUpperCase() + tab.slice(1) + ' Rankings'}
@@ -248,7 +248,7 @@ export default function LeaderboardsPage() {
         </div>
         <div className="flex gap-2 mt-4">
           {['🔥 7-Day Streak', '💪 100 Push-Ups', '🌳 Skill Unlock', '⭐ First PR'].map((c, i) => (
-            <div key={i} className="bg-white/10 rounded-lg px-2.5 py-1.5 text-[10px] text-white/70">{c}</div>
+            <div key={i} className="bg-surface/10 rounded-lg px-2.5 py-1.5 text-[10px] text-white/70">{c}</div>
           ))}
         </div>
         <div className="mt-3 text-[10px] text-white/40">Full challenges system launching soon</div>

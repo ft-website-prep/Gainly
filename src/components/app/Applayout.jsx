@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import DailyGoalPopup from '../workouts/DailyGoalPopup'
+import { useTheme } from '../../contexts/ThemeContext'
+import gainlyLogo from '../../../logo_aligned_app_ready.png'
 
 const NAV_ITEMS = [
   { path: '/app',              label: 'Dashboard',    icon: '🏠', end: true },
